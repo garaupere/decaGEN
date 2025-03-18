@@ -20,3 +20,6 @@ Oliva, S. (1992). _La mètrica i el ritme de la prosa_. Quaderns Crema.
 
 ## Per a citar-lo
 Garau, P. (2025). _DecaGEN_ (Codi). https://github.com/garaupere/decaGEN/
+
+---
+Copyright © 2025 Pere Garau Borràs
