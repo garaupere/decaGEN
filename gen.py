@@ -1,10 +1,9 @@
 """Possibles decasíl·labs segons Oliva"""
-import pandas as pd
 from pattern_parser import read_pattern as gen
 
 
 
-def _1980_():
+def oliva1980():
     """
     A.	El nombre de síl·labes —des de la primera de totes fins a l’última tònica— ha de ser 10.
     B.	El nombre de síl·labes àtones posteriors a l’última tònica pot oscil·lar de zero a dues [i esporàdicament més].
@@ -15,23 +14,17 @@ def _1980_():
         i.	Si la síl·laba 4 porta accent màxim, també el poden portar les síl·labes (1) + (5) + (7).
         ii.	Si la síl·laba 6 porta accent màxim, també el poden portar les síl·labes (1) + (3) + (7).
         iii.	Si les síl·labes 2 i 8 porten accent màxim, també el poden portar les síl·labes (3) + (5).
-"""
+    """
+    __name__ = 'Oliva 1980'
     gen_patterns = ['WXWXWXWXWS', 'SWWXWXWXWS', 'WYSWWXWYWS', 'WYWXSWWYWS', 'WXWXWXSWWS']
     patterns = []
     for pattern in gen_patterns:
         result = gen(pattern)
         patterns.extend(result)
-
-    # elimina patrons duplicats
-    patterns = list(set(patterns))
-    # Desa-ho en un fitxer Excel
-    df = pd.DataFrame(patterns, columns=['pattern'])
-    df.to_excel('../generated/oliva1980.xlsx', index= False)
-
-    return patterns
+    return list(set(patterns))
 
 
-def _1988_():
+def oliva1988():
     """
     A.	La síl·laba 10 ha de ser obligatòriament un accent màxim.
     B.	Les síl·labes 2, 4, 6 i 8 poden ser T o bé A.
@@ -41,48 +34,36 @@ def _1988_():
         iii.	Si la 5 és T, la 4 o la 8 també ho han de ser (no la 3, ni la 7).
         iv.	Si la 7 és T, la 4 també ho ha de ser (no la 3, ni la 5)
     """
+    __name__ = 'Oliva 1988'
     gen_patterns = ['WXWXWXWXWS', 'SWWYWYWXWS', 'WXSWWSWXWS', 'WXWYSWWYWS', 'WXWSWXSWWS']
     patterns = []
     for pattern in gen_patterns:
         result = gen(pattern)
         patterns.extend(result)
-
-    # elimina patrons duplicats
-    patterns = list(set(patterns))
-
-    # Desa-ho en un fitxer Excel
-    df = pd.DataFrame(patterns, columns=['pattern'])
-    df.to_excel('../generated/oliva1988.xlsx', index= False)
-    return patterns
+    return list(set(patterns))
 
 
-def _1992_():
+def oliva1992():
     """"""
     gen_patterns = ['WXWSWXWXWS', 'SWWSWXWXWS', 'WXWSWWSWWS', 'WXWXWSWXWS', 'SWWXWSWXWS', 'SWSWWSWXWS', 'WWXWWSWXWS', 'SWSWSSWSWS']
     patterns = []
     for pattern in gen_patterns:
         result = gen(pattern)
         patterns.extend(result)
-
-    # elimina patrons duplicats
-    patterns = list(set(patterns))
-    # Desa-ho en un fitxer Excel
-    df = pd.DataFrame(patterns, columns=['pattern'])
-    df.to_excel('../generated/oliva1992.xlsx', index= False)
-    return patterns
+    return list(set(patterns))
 
 
 
 if __name__ == '__main__':
-    o1980 = _1980_()
+    o1980 = oliva1980()
     print("-" * 20, "Oliva 1980", f'({len(o1980)})', "-" * 20)
     print(o1980)
     print("-" * 50)
-    o1988 = _1988_()
+    o1988 = oliva1988()
     print("-" * 20, "Oliva 1988", f'({len(o1988)})', "-" * 20)
     print(o1988)
     print("-" * 50)
-    o1992 = _1992_()
+    o1992 = oliva1992()
     print("-" * 20, "Oliva 1992", f'({len(o1992)})', "-" * 20)
     print(o1992)
     print("-" * 50)
