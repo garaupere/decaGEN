@@ -53,6 +53,15 @@ def oliva1992():
     return list(set(patterns))
 
 
+def dols2006():
+    """"""
+    gen_patterns = ['WXWXWSWXWS', 'XWWXWSWXWS']
+    patterns = []
+    for pattern in gen_patterns:
+        result = gen(pattern)
+        patterns.extend(result)
+    return list(set(patterns))
+
 
 if __name__ == '__main__':
     o1980 = oliva1980()
@@ -66,4 +75,8 @@ if __name__ == '__main__':
     o1992 = oliva1992()
     print("-" * 20, "Oliva 1992", f'({len(o1992)})', "-" * 20)
     print(o1992)
+    print("-" * 50)
+    d2006 = dols2006()
+    print("-" * 20, "Dols 2006", f'({len(d2006)})', "-" * 20)
+    print(d2006)
     print("-" * 50)

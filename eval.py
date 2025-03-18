@@ -15,7 +15,7 @@ def oliva1980(model, exemple):
         posicions = []
         for i in range(len(model) - 1):
             if model[i:i + 2] == "WS" and exemple[i:i + 2] == "TA":
-                posicions.append(i+1)
+                posicions.append(i)
 
         return posicions
 
@@ -23,7 +23,7 @@ def oliva1980(model, exemple):
         posicions = []
         for i in range(len(model) - 1):
             if model[i:i + 2] == "WS" and exemple[i:i + 2] == "AA":
-                posicions.append(i+1)
+                posicions.append(i)
         return posicions
 
     rc3_positions = aplicar_rc3(model, exemple)
@@ -59,16 +59,16 @@ def oliva1992(model, exemple):
     """"""
     def rm1(exemple):
         posicions = []
-        for i in range(len(exemple) - 1):
+        for i in range(0, len(exemple), 2):
             if exemple[i:i + 2] == "TA":
-                posicions.append(i+1)
+                posicions.append(i)
         return posicions
 
     def rm2(exemple):
         posicions = []
         for i in range(len(exemple) - 1):
             if exemple[i:i + 3] == "AAT":
-                posicions.append(i+1)
+                posicions.append(i)
         return posicions
 
     aplicar_rm1 = rm1(exemple)
@@ -78,8 +78,8 @@ def oliva1992(model, exemple):
         "RM1": len(aplicar_rm1),
         "RM2": len(aplicar_rm2),
         "Complexitat": total,
-        "RC2 posicions": ', '.join([str(i + 1) for i in aplicar_rm1]),
-        "RC3 posicions": ', '.join([str(i + 1) for i in aplicar_rm2])
+        "RM1 posicions": ', '.join([str(i + 1) for i in aplicar_rm1]),
+        "RM2 posicions": ', '.join([str(i + 1) for i in aplicar_rm2])
         }
     df = pd.DataFrame(regles, index=[0])
     # Afegeix l'exemple i el model al principi del DataFrame
