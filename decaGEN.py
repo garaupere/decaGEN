@@ -1,3 +1,5 @@
+# Copyright © 2025 Pere Garau Borràs
+
 import pandas as pd
 
 import gen
