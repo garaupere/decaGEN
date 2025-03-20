@@ -1,5 +1,5 @@
 """Possibles decasíl·labs segons Oliva"""
-from pattern_parser import read_pattern as gen, parse_patter_hierarchy as gen2
+from pattern_parser import read_pattern as gen, parse_patter_hierarchy as gen2, parse_patter_hierarchyB as gen3
 
 
 def oliva1980():
@@ -59,7 +59,7 @@ def oliva1992b():
     gen_patterns = ['WXWSWXWXWS', 'SWWSWXWXWS', 'WXWSWWSWWS', 'WXWXWSWXWS', 'SWWXWSWXWS', 'SWSWWSWXWS', 'WWXWWSWXWS']
     patterns = []
     for pattern in gen_patterns:
-        result = gen(pattern)
+        result = gen3(pattern)
         patterns.extend(result)
     return list(set(patterns))
 

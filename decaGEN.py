@@ -21,8 +21,9 @@ def grammar(model, generator, evaluator):
     d.index = range(1, len(d) + 1)
     print(tabulate(d, headers='keys', tablefmt='psql'))
     # Desa el DataFrame a un fitxer Excel
-    d.to_excel(f"generated/{generator.__name__}.xlsx", index=False)
+    d.to_excel(f"generated/{generator.__name__}.xlsx", index=True)
     print("-" * 50)
+    return d
 
 
 if __name__ == "__main__":
@@ -30,6 +31,6 @@ if __name__ == "__main__":
     grammar(model, gen.oliva1980, eval.oliva1980)
     grammar(model, gen.oliva1988, eval.oliva1980)
     grammar(model, gen.oliva1992, eval.oliva1992)
-    grammar(model, gen.oliva1992b, eval.oliva1980)
+    grammar(model, gen.oliva1992b, eval.oliva1992b)
     grammar(model, gen.dols2006, eval.oliva1980)
     grammar(model, gen.oliva2008, eval.oliva1980)
