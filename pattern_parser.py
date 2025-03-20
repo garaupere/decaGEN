@@ -30,10 +30,38 @@ def read_pattern(pattern):
     return list(set(results))
 
 
+def parse_patter_hierarchy(pattern):
+    """Usat per a Oliva (1992), en què el valor de T pot ser entre 1-4 (depèn del nivell del batec en la jerarquia prosòdica)."""
+    def generate_combinations_2(pat, index, current, results, y_count, t_count):
+        if index == len(pat):
+            if t_count > 0 or y_count == 0:
+                results.append(current)
+            return
+        if pat[index] == 'X':
+            generate_combinations_2(pat, index + 1, current + '0', results, y_count, t_count)
+            generate_combinations_2(pat, index + 1, current + '1', results, y_count, t_count)
+            generate_combinations_2(pat, index + 1, current + '2', results, y_count, t_count)
+            generate_combinations_2(pat, index + 1, current + '3', results, y_count, t_count)
+        elif pat[index] == 'S':
+            generate_combinations_2(pat, index + 1, current + '3', results, y_count, t_count)
+        elif pat[index] == 'W':
+            generate_combinations_2(pat, index + 1, current + '0', results, y_count, t_count)
+        elif pat[index] == 'Y':
+            if y_count > 1:
+                generate_combinations_2(pat, index + 1, current + '0', results, y_count - 1, t_count)
+            generate_combinations_2(pat, index + 1, current + '3', results, y_count, t_count)
+
+    results = []
+    y_count = pattern.count('Y')
+    generate_combinations_2(pattern, 0, '', results, y_count, 0)
+    return list(set(results))
+
+
 if __name__ == '__main__':
     patterns = ['WXWXWXWXWS', 'SWWYWYWXWS', 'WXSWWSWXWS', 'WXWYSWWYWS', 'WXWSWXSWWS']
     for pattern in patterns:
-        rp = read_pattern(pattern)
+        rp = parse_patter_hierarchy(pattern)
         print('-' * 20, pattern, f'{len(rp)}', '-' * 20)
         print(rp)  # Ha de mostrar totes les combinacions possibles
         print('-' * 50)
+

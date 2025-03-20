@@ -1,6 +1,5 @@
 """Possibles decasíl·labs segons Oliva"""
-from pattern_parser import read_pattern as gen
-
+from pattern_parser import read_pattern as gen, parse_patter_hierarchy as gen2
 
 
 def oliva1980():
@@ -45,12 +44,42 @@ def oliva1988():
 
 def oliva1992():
     """"""
-    gen_patterns = ['WXWSWXWXWS', 'SWWSWXWXWS', 'WXWSWWSWWS', 'WXWXWSWXWS', 'SWWXWSWXWS', 'SWSWWSWXWS', 'WWXWWSWXWS', 'SWSWSSWSWS']
+    __name__ = 'Oliva 1992'
+    gen_patterns = ['WXWSWXWXWS', 'SWWSWXWXWS', 'WXWSWWSWWS', 'WXWXWSWXWS', 'SWWXWSWXWS', 'SWSWWSWXWS', 'WWXWWSWXWS']
+    patterns = []
+    for pattern in gen_patterns:
+        result = gen2(pattern)
+        patterns.extend(result)
+    return list(set(patterns))
+
+
+def oliva1992b():
+    """"""
+    __name__ = 'Oliva 1992b'
+    gen_patterns = ['WXWSWXWXWS', 'SWWSWXWXWS', 'WXWSWWSWWS', 'WXWXWSWXWS', 'SWWXWSWXWS', 'SWSWWSWXWS', 'WWXWWSWXWS']
     patterns = []
     for pattern in gen_patterns:
         result = gen(pattern)
         patterns.extend(result)
     return list(set(patterns))
+
+def oliva2008():
+    """"""
+    __name__ = 'Oliva 2008'
+    gen_patterns = []
+    c1 = ['WSWS', 'SWWS']
+    c2 = ['WSWSWS', 'WWSWWS', 'SWWSWS', 'WSSWWS', 'SWSWWS']
+
+    for i in c1:
+        for j in c2:
+            gen_patterns.append(i + j)
+            gen_patterns.append(j + i)
+
+    patterns = []
+    for pattern in gen_patterns:
+        result = gen(pattern)
+        patterns.extend(result)
+    return patterns
 
 
 def dols2006():
@@ -76,7 +105,15 @@ if __name__ == '__main__':
     print("-" * 20, "Oliva 1992", f'({len(o1992)})', "-" * 20)
     print(o1992)
     print("-" * 50)
+    o1992b = oliva1992b()
+    print("-" * 20, "Oliva 1992b", f'({len(o1992b)})', "-" * 20)
+    print(o1992b)
+    print("-" * 50)
     d2006 = dols2006()
     print("-" * 20, "Dols 2006", f'({len(d2006)})', "-" * 20)
     print(d2006)
+    print("-" * 50)
+    o2008 = oliva2008()
+    print("-" * 20, "Oliva 2008", f'({len(o2008)})', "-" * 20)
+    print(o2008)
     print("-" * 50)

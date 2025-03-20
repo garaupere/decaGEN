@@ -58,28 +58,98 @@ def oliva1980(model, exemple):
 def oliva1992(model, exemple):
     """"""
     def rm1(exemple):
+        "Inversió iàmbica."
         posicions = []
         for i in range(0, len(exemple), 2):
-            if exemple[i:i + 2] == "TA":
+            if exemple[i:i + 2] in ['30', '20', '10']:
                 posicions.append(i)
         return posicions
 
     def rm2(exemple):
+        "Binarització del còlon."
         posicions = []
-        for i in range(len(exemple) - 1):
-            if exemple[i:i + 3] == "AAT":
+        for i in range(0, len(exemple), 3):
+            if exemple[i:i + 3] in ['003', '002', '001']:
                 posicions.append(i)
         return posicions
 
+    def rab(exemple):
+        "Traslladeu l’accent cap a la dreta, des del segon batec per amunt, fins que trobeu un altre accent que pugui absorbir tots els batecs que són traslladats."
+        posicions = []
+        for i in range(len(exemple)-1):
+            val = int(exemple[i])
+            next_val = int(exemple[i + 1])
+            if next_val:
+                if 0 < val < next_val < 3:
+                    posicions.append(i)
+        return posicions
+
+    def radb(exemple):
+        "En una configuració definida com a vall, s’afegeix un batec de manera que no es creï cap xoc accentual."
+        posicions = []
+        for i in range(len(exemple)-2):
+            val = list(str(exemple[i:i + 3]))
+            val1 = int(val[0])
+            val2 = int(val[1])
+            val3 = int(val[2])
+            if 3 > val2 > 0 and val3 < 1 and val1 < 1:
+                posicions.append(i)
+        return posicions
+
+    def rc1(exemple):
+        "Cada posició terminal W requereix una síl·laba d’un batec, com a mínim."
+        W_positions = [0, 2, 4, 6, 8]
+        positions = []
+        exemple = list(exemple)
+        for i in W_positions:
+            if int(exemple[i]) > 0:
+                positions.append(i)
+        return positions
+
+    def rc2(exemple):
+        "Cada posició terminal S dominada per W requereix una síl·laba de dos batecs, com a mínim."
+        exemple = list(exemple)
+        S_domWpositions = [1, 3, 5, 7]
+        positions = []
+        for i in S_domWpositions:
+            if int(exemple[i]) < 2:
+                positions.append(i)
+        return positions
+
+    def rc3(exemple):
+        "Cada posició terminal S dominada per S requereix una síl·laba de quatre batecs, com a mínim. (Si en té tres, el vers adquireix tensió; però la majoria dels poetes no eliminen del tot aquesta possibilitat. La posició S dominada per S i ocupada per una síl·laba de menys de quatre batecs és típica en els versos discontinus.)"
+        exemple = list(exemple)
+        S_domSpositions = [3, 5, 9]
+        positions = []
+        for i in S_domSpositions:
+            if int(exemple[i]) < 3:
+                positions.append(i)
+        return positions
+
     aplicar_rm1 = rm1(exemple)
     aplicar_rm2 = rm2(exemple)
-    total = len(aplicar_rm1) + len(aplicar_rm2)
+    aplicar_rab = rab(exemple)
+    aplicar_radb = radb(exemple)
+    aplicar_rc1 = rc1(exemple)
+    aplicar_rc2 = rc2(exemple)
+    aplicar_rc3 = rc3(exemple)
+    total = len(aplicar_rm1) + len(aplicar_rm2) + len(aplicar_rab) + len(aplicar_radb) + len(aplicar_rc1) + len(aplicar_rc2) + len(aplicar_rc3)
     regles = {
         "RM1": len(aplicar_rm1),
         "RM2": len(aplicar_rm2),
+        "RAB": len(aplicar_rab),
+        "RADB": len(aplicar_radb),
+        "RC1": len(aplicar_rc1),
+        "RC2": len(aplicar_rc2),
+        "RC3": len(aplicar_rc3),
         "Complexitat": total,
         "RM1 posicions": ', '.join([str(i + 1) for i in aplicar_rm1]),
-        "RM2 posicions": ', '.join([str(i + 1) for i in aplicar_rm2])
+        "RM2 posicions": ', '.join([str(i + 1) for i in aplicar_rm2]),
+        "RAB posicions": ', '.join([str(i + 1) for i in aplicar_rab]),
+        "RADB posicions": ', '.join([str(i + 1) for i in aplicar_radb]),
+        "RC1 posicions": ', '.join([str(i + 1) for i in aplicar_rc1]),
+        "RC2 posicions": ', '.join([str(i + 1) for i in aplicar_rc2]),
+        "RC3 posicions": ', '.join([str(i + 1) for i in aplicar_rc3])
         }
     df = pd.DataFrame(regles, index=[0])
     # Afegeix l'exemple i el model al principi del DataFrame
@@ -90,7 +160,7 @@ def oliva1992(model, exemple):
 
 if __name__ == '__main__':
     model = "WSWSWSWSWS"
-    exemple = "TAATAATAAT"
-    print(oliva1980(model, exemple))
-
-    print(oliva1992(model, exemple))
+    #exemple = "TAATAATAAT"
+    #print(oliva1980(model, exemple))
+    exemple = "0040040404"
+    print(oliva1992(model, exemple).to_string())
