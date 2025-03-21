@@ -1,5 +1,5 @@
 """Un mòdul per a comparar els resultats dels diferents generadors i avaluadors."""
-
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from tabulate import tabulate
@@ -9,10 +9,165 @@ import eval
 from decaGEN import grammar
 
 
+def stress(pattern):
+    """Equipara el patró a valors numèrics"""
+    stress_values = []
+    for pos in pattern:
+        if pos == 'A':
+            stress_values.append(0)
+        elif pos == 'T':
+            stress_values.append(100)
+    return stress_values
+
+
+def convert_df(df):
+    """Converteix els valors de text dels Exemples del DF en valors numèrics"""
+    df['Exemple'] = df['Exemple'].apply(stress)
+    return df
+
+
+def plot_stress(df):
+    """Per a cada generador del DF, obtén la mitjana de tonicitat per síl·laba i fes un gràfic amb tots els valors"""
+    df_original = df.copy()
+
+    x_values = np.arange(1, 11)
+    for generator in df['Generador'].unique():
+        df_gen = df[df['Generador'] == generator]
+        values = df_gen['Exemple'].apply(pd.Series).mean()
+        plt.plot(x_values, values, label=generator)
+
+    plt.legend()
+    plt.xticks(np.arange(0, 11))
+    plt.tight_layout()
+    plt.savefig("compared/stress.png", dpi=600)
+    plt.close()
+
+    #Ara calcula la mitjana de tonicitat per síl·laba de tots els generadors i fes un gràfic amb el valor mitjà de cada síl·laba i la std
+    x_values = np.arange(1, 11)
+    values = df['Exemple'].apply(pd.Series).mean()
+    plt.plot(x_values, values, color='blue')
+    plt.xticks(np.arange(0, 11))
+    plt.tight_layout()
+    plt.savefig("compared/stress_mean.png", dpi=600)
+    plt.close()
+
+    # Compara la mitjana de cada generador amb la mitjana real
+    real = [28.15813225, 55.81817545, 27.26886918, 72.63894282, 14.5963982, 76.08821296, 22.36364315, 75.33253493,
+            3.93168493, 100]
+
+
+    for generator in df['Generador'].unique():
+        df_gen = df[df['Generador'] == generator]
+        values = df_gen['Exemple'].apply(pd.Series).mean()
+        plt.plot(x_values, values, label=generator)
+
+    plt.plot(x_values, real, color='red', label='Real')
+    plt.legend()
+    plt.xticks(np.arange(0, 11))
+    plt.tight_layout()
+    plt.savefig("compared/comparison.png", dpi=600)
+    plt.close()
+
+    # Desa els valors en un fitxer Excel
+    npdf = pd.DataFrame()
+    for generator in df['Generador'].unique():
+        df_gen = df[df['Generador'] == generator]
+        values = df_gen['Exemple'].apply(pd.Series).mean()
+        npdf[generator] = values
+    npdf = npdf.T
+    real_series = pd.Series(real, name='Real')
+    npdf = npdf._append(real_series)
+    npdf.to_excel("compared/comparison.xlsx", index=True)
+
+
+
+
+    # Ara compararam la mitjana teòrica amb la real
+    plt.plot(x_values, values, color='blue', label='Real')
+    plt.plot(x_values, real, color='red', label='Teòric')
+    plt.legend()
+    plt.xticks(np.arange(0, 11))
+    plt.tight_layout()
+    plt.savefig("compared/stress_mean_comparison.png", dpi=600)
+    plt.close()
+
+
+    # Ara comparam les mitjanes de cada generador amb la mitjana teòrica i en calculam la diferència. En el gràfic. L'eix Y serà la diferència. A X el valor de la mitjana real serà representat per [0, 0, 0, 0, 0, 0 ,0, 0, 0, 0] i així podrem veure la diferència.
+
+    diffs = []
+    for generator in df['Generador'].unique():
+        df_gen = df[df['Generador'] == generator]
+        values = df_gen['Exemple'].apply(pd.Series).mean()
+        diff = [abs(x) for x in np.subtract(real, values)]
+        diffs.append([generator, diff])
+        plt.plot(x_values, diff, label=generator)
+
+    plt.plot(x_values, np.zeros(10), color='red', label='Real')
+    plt.legend()
+    plt.xticks(np.arange(0, 11))
+    plt.tight_layout()
+    plt.savefig("compared/stress_mean_diff.png", dpi=600)
+    plt.close()
+
+
+    ndiffs = []
+    for diff in diffs:
+        generador = diff[0]
+        values = diff[1]
+        diff_mean = np.mean(values)
+        ndiffs.append([generador, values, diff_mean])
+
+    # Ordena els generadors per la mitjana de la diferència (menor->major)
+    diffs = sorted(ndiffs, key=lambda x: x[2])
+    df = pd.DataFrame(ndiffs, columns=['Generador', 'Diferència', 'Mitjana']).drop(columns='Diferència')
+    df.index = range(1, len(df) + 1)
+    print(tabulate(df, headers='keys', tablefmt='psql'))
+
+    # Calcula l'accuracy de cada generador
+    accuracies = []
+    for diff in diffs:
+        generador = diff[0]
+        values = diff[1]
+        accuracy = 100 - np.mean(values)
+        accuracies.append([generador, accuracy])
+
+    # Ordena els generadors per l'accuracy (major->menor)
+    accuracies = sorted(accuracies, key=lambda x: x[1], reverse=True)
+    df = pd.DataFrame(accuracies, columns=['Generador', 'Accuracy'])
+    df.index = range(1, len(df) + 1)
+    print(tabulate(df, headers='keys', tablefmt='psql'))
+
+
+
+def add_soroll(df):
+    """Afegeix soroll als valors teòrics. Es calcula un valor de potència per a cada patró a partir del valor de complexitat.
+    potència = (10-complexitat) * 100"""
+
+    soroll = []
+    for index, row in df.iterrows():
+        complexitat = row['Complexitat']
+        soroll.append((10 - complexitat) * 100)
+    df['Soroll'] = soroll
+
+    # Ara repeteix els patrons tantes vegades com indica la potència
+    new_df = pd.DataFrame()
+    for index, row in df.iterrows():
+        for i in range(int(row['Soroll'])):
+            new_df = new_df._append(row)
+            print(row)
+    new_df = new_df.drop(columns='Soroll')
+    new_df.index = range(1, len(new_df) + 1)
+    # Desa-ho en un fitxer Excel
+    new_df.to_excel("compared/with_soroll.xlsx", index=False)
+    return new_df
+
+
+
 def get_var_name(variable):
     for name, value in globals().items():
         if value is variable:
             return name
+
 
 if __name__ == "__main__":
     model = 'WSWSWSWSWS'
@@ -55,6 +210,13 @@ if __name__ == "__main__":
     print(d.groupby('Generador').size())
     print("-" * 50)
 
+    # Converteix els valors de text dels Exemples del DF en valors numèrics
+    dnum = convert_df(d)
+    print(tabulate(dnum, headers='keys', tablefmt='psql'))
+
+    # Per a cada generador del DF, obtén la mitjana de tonicitat per síl·laba i fes un gràfic amb tots els valors
+    plot_stress(dnum)
+
 
     # De tot el DF mostra només els exemples únics, calcula la complexitat mitjana per exemple i ordena per complexitat
     d_unique = d.drop_duplicates(subset='Exemple').sort_values(by='Complexitat')
@@ -62,7 +224,7 @@ if __name__ == "__main__":
     print(tabulate(d_unique, headers='keys', tablefmt='psql'))
 
     # Desa el DataFrame a un fitxer Excel
-    d_unique.to_excel("generated/compare_results.xlsx", index=True)
+    d_unique.to_excel("compared/compare_results.xlsx", index=True)
 
     # Del conjunt, calcula un valor de complexitat dividint el valor actual entre el nombre de generadors que han generat l'exemple
     d_unique['Complexitat'] = d_unique['Complexitat'] / d_unique['Coincidències'].apply(lambda x: len(x.split(', ')))
@@ -71,7 +233,16 @@ if __name__ == "__main__":
     print(tabulate(d_unique, headers='keys', tablefmt='psql'))
 
     # Desa el DataFrame a un fitxer Excel
-    d_unique.to_excel("generated/compare_results_normalized.xlsx", index=True)
+    d_unique.to_excel("compared/compare_results_normalized.xlsx", index=True)
 
 
+    # Soroll
+    print("-" * 50)
+    print("Soroll")
+    print("-" * 50)
+    dnum = add_soroll(dnum)
+    print(tabulate(dnum, headers='keys', tablefmt='psql'))
 
+    # A partir de les dades amb soroll fes la comparativa
+    plot_stress(dnum)
+    print("-" * 50)
