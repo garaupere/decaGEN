@@ -54,70 +54,8 @@ def plot_stress(df):
     plt.close()
 
     # Compara la mitjana de cada generador amb la mitjana real
-    freq_real = {
-        "ATATATATAT": 35.88083416, "AATAATATAT": 14.20456802, "TAATATATAT": 10.39126117, "TATAATATAT": 6.716981132,
-        "ATATAATAAT": 5.167825223, "TAATAATAAT": 2.387288977, "AATATATAAT": 1.982125124, "ATAATAATAT": 1.882820258,
-        "ATTAATATAT": 1.620655412, "ATAATATAAT": 1.557100298, "AATTATATAT": 1.441906653, "ATATAATTAT": 1.410129096,
-        "TATATATAAT": 1.374379345, "ATATATAATT": 1.279046673, "AATATAATAT": 1.203574975, "TATATAATAT": 1.024826216,
-        "ATAAATATAT": 0.691161867, "AATAATAATT": 0.683217478, "TATTATATAT": 0.623634558, "TAATAATTAT": 0.512413108,
-        "ATATAATATT": 0.476663357, "TATAATAATT": 0.413108242, "ATAATTATAT": 0.381330685, "ATATATAAAT": 0.309831182,
-        "ATAATATATT": 0.297914598, "TAATATAATT": 0.293942403, "AATAATTAAT": 0.285998014, "AATTAATAAT": 0.278053625,
-        "ATATATTAAT": 0.262164846, "ATATAAATAT": 0.250248262, "TATATATATT": 0.238331678, "ATTATATAAT": 0.2224429,
-        "AATAATAAAT": 0.206554121, "AATATATATT": 0.186693148, "TAATAATATT": 0.178748759, "AAATATATAT": 0.174776564,
-        "TATTAATAAT": 0.158887786, "ATATATATTT": 0.158887786, "AATATTATAT": 0.142999007, "ATATTAATAT": 0.139026812,
-        "TATATTATAT": 0.135054618, "ATTATAATAT": 0.119165839, "AATATATTAT": 0.107249255, "AATTAATTAT": 0.103277061,
-        "ATTTATATAT": 0.099304866, "TATAATTAAT": 0.095332671, "ATATTATAAT": 0.095332671, "ATTAATAATT": 0.091360477,
-        "AATAAATAAT": 0.087388282, "TATAATAAAT": 0.079443893, "ATAATATTAT": 0.079443893, "TATATATTAT": 0.075471698,
-        "TAATAAATAT": 0.063555114, "TAATATATTT": 0.05958292, "TATAAATAAT": 0.05958292, "TAATTAATAT": 0.055610725,
-        "TAAAATATAT": 0.047666336, "TAATATAAAT": 0.047666336, "AATTATAATT": 0.047666336, "AAATAATAAT": 0.043694141,
-        "TATTAATTAT": 0.043694141, "TAATATTAAT": 0.043694141, "ATTTAATAAT": 0.043694141, "ATTAATAAAT": 0.043694141,
-        "TAAATATAAT": 0.039721946, "AATTAATATT": 0.039721946, "ATTATATATT": 0.039721946, "AATAATTATT": 0.039721946,
-        "ATAAATAATT": 0.039721946, "ATATATTTAT": 0.035749752, "ATATTATATT": 0.031777557, "TATAATATTT": 0.031777557,
-        "TATTATAATT": 0.027805362, "ATAATAATTT": 0.027805362, "TAATTATAAT": 0.027805362, "TAAATAATAT": 0.027805362,
-        "ATTAAATAAT": 0.023833168, "AATAATATTT": 0.023833168, "ATTTAATTAT": 0.023833168, "ATTATTATAT": 0.023833168,
-        "ATTATATTAT": 0.023833168, "AATATTAATT": 0.019860973, "TATATAATTT": 0.019860973, "ATATATTATT": 0.019860973,
-        "TATAATTATT": 0.019860973, "ATAATTAATT": 0.019860973, "AATTAAATAT": 0.015888779, "ATAAATTAAT": 0.015888779,
-        "TAAATATATT": 0.011916584, "AATTATATTT": 0.011916584, "TAATTTATAT": 0.011916584, "ATAATTAAAT": 0.011916584,
-        "AAATAATATT": 0.011916584, "ATAATAAATT": 0.011916584, "ATTAATTAAT": 0.011916584, "TATTAATATT": 0.011916584,
-        "AATTTAATAT": 0.011916584, "TATAATTTAT": 0.011916584, "ATTAATATTT": 0.011916584, "AATATAATTT": 0.011916584,
-        "ATTTATAATT": 0.011916584, "ATATTTATAT": 0.011916584, "TAAATTATAT": 0.007944389, "AAATATTAAT": 0.007944389,
-        "ATTAATTATT": 0.007944389, "AATATAAATT": 0.007944389, "AATATATTTT": 0.007944389, "AATTAATTTT": 0.007944389,
-        "AATAAATTAT": 0.007944389, "ATATAAAATT": 0.007944389, "TATAAATATT": 0.007944389, "ATATTATTAT": 0.007944389,
-        "ATAAAATAAT": 0.007944389, "TATATAAAAT": 0.007944389, "ATATTAATTT": 0.007944389, "AAATAATTAT": 0.007944389,
-        "ATATTTAAAT": 0.003972195, "ATAATAAAAT": 0.003972195, "AATATTAAAT": 0.003972195, "AATATTTATT": 0.003972195,
-        "ATTTAATATT": 0.003972195, "ATTTTATAAT": 0.003972195, "TATATATTTT": 0.003972195, "ATATTTTAAT": 0.003972195,
-        "ATAAATAAAT": 0.003972195, "TAATTATTAT": 0.003972195, "TAATAAATTT": 0.003972195, "ATTTTTATAT": 0.003972195,
-        "TAATTAAATT": 0.003972195, "ATATTTATTT": 0.003972195, "AATATAAAAT": 0.003972195, "ATTATTTAAT": 0.003972195,
-        "AATTATAAAT": 0.003972195, "ATAAATATTT": 0.003972195, "AAATTATAAT": 0.003972195, "AATAATTTAT": 0.003972195,
-        "AAATATTATT": 0.003972195, "AAATATAATT": 0.003972195, "ATTTTAATTT": 0.003972195, "ATTTATTATT": 0.003972195,
-        "TATATAAATT": 0.003972195, "AATTTATAAT": 0.003972195, "TAATAATTTT": 0.003972195, "TATTTATAAT": 0.003972195,
-        "AATTATTATT": 0.003972195, "ATATAATTTT": 0.003972195, "AAATAAATAT": 0.003972195, "ATTAATTTTT": 0.003972195,
-        "AATTTTATAT": 0.003972195, "TAATTAATTT": 0.003972195, "TATATTTAAT": 0.003972195, "TAAATTATTT": 0.003972195,
-        "ATATTTAATT": 0.003972195, "TATTATTATT": 0.003972195, "ATTAATTTAT": 0.003972195, "TAATTATATT": 0.003972195,
-        "TAATATTATT": 0.003972195, "TATTATTAAT": 0.003972195, "AAATATAAAT": 0.003972195, "TATTATATTT": 0.003972195,
-        "AAATTAATAT": 0.003972195, "ATAATTTTAT": 0.003972195, "TATTTAATTT": 0.003972195, "AATTTATATT": 0.003972195,
-        "ATTTATTAAT": 0.003972195, "ATAATTTAAT": 0.003972195, "TATATTAATT": 0.003972195
-    }
-
-    # Converteix els patrons
-    freq_real_nou = []
-    for key in freq_real.keys():
-        freq_real_nou.append([stress(key), freq_real[key]])
-
-    freq_real = freq_real_nou
-
-    print(freq_real)
-
-    print(df_original['Exemple'])
-    # Identifica els patrons generats dins dels resultats reals
-    real = [0] * 10
-    for example in df_original['Exemple']:
-        for i in range(10):
-            real[i] += example[i]
-
-    # Normalitza els valors reals
-    real = [x / sum(real) * 100 for x in real]
-
+    real = [23.93998628, 55.66301726, 32.91118477, 62.76294145, 15.94435333, 71.88584774, 22.50826433, 76.41943222,
+            5.379046379, 100]
 
 
     for generator in df['Generador'].unique():
@@ -125,7 +63,7 @@ def plot_stress(df):
         values = df_gen['Exemple'].apply(pd.Series).mean()
         plt.plot(x_values, values, label=generator)
 
-    plt.plot(x_values, real, color='red', label='Real')
+    plt.plot(x_values, real, color='red', label='Real', linestyle='--')
     plt.legend()
     plt.xticks(np.arange(0, 11))
     plt.tight_layout()
@@ -147,8 +85,14 @@ def plot_stress(df):
 
 
     # Ara compararam la mitjana teòrica amb la real
-    plt.plot(x_values, values, color='blue', label='Real')
-    plt.plot(x_values, real, color='red', label='Teòric')
+    plt.plot(x_values, values, color='red', label='Real')
+    plt.plot(x_values, real, color='blue', label='Teòric')
+    # Dibuixa la distància entre els valors teòrics i reals
+    plt.fill_between(x_values, values, real, color='lightblue', alpha=0.2)
+    # Escriu els valors de la distància
+    for i, txt in enumerate(abs(np.subtract(real, values))):
+        plt.annotate(f"{txt:.2f}", (x_values[i], values[i]), textcoords="offset points", xytext=(0, 10), ha='center')
+
     plt.legend()
     plt.xticks(np.arange(0, 11))
     plt.tight_layout()
@@ -166,7 +110,7 @@ def plot_stress(df):
         diffs.append([generator, diff])
         plt.plot(x_values, diff, label=generator)
 
-    plt.plot(x_values, np.zeros(10), color='red', label='Real')
+    plt.plot(x_values, np.zeros(10), color='red', label='Real', linestyle='--')
     plt.legend()
     plt.xticks(np.arange(0, 11))
     plt.tight_layout()
@@ -192,7 +136,7 @@ def plot_stress(df):
     for diff in diffs:
         generador = diff[0]
         values = diff[1]
-        accuracy = 100 - np.mean(values)
+        accuracy = (100 - np.mean(values)) / 100
         accuracies.append([generador, accuracy])
 
     # Ordena els generadors per l'accuracy (major->menor)
@@ -273,7 +217,6 @@ if __name__ == "__main__":
 
     # Concatena tots els DFs en un de sol
     d = pd.concat(dfs, axis=0).fillna(0)
-    d_original = deepcopy(d)
 
     # Mostra en una nova columna ('Coincidències') si el resultat d'un generador és generat també per altres generadors. Indica-hi quins.
     d['Coincidències'] = d['Exemple'].apply(lambda x: ', '.join(d[d['Exemple'] == x]['Generador'].unique()))
@@ -344,7 +287,7 @@ if __name__ == "__main__":
     real = real.set_index('patró')
 
     # Ara cerca els valors de d_unique a real i calcula la diferència entre la probabilitat real i la calculada. Pot ser que els valors no hi siguin, si no hi són defineix la freqüència com el valor NaN.
-    d_unique['Freqüència'] = d_unique['Exemple'].apply(lambda x: real.loc[x, 'freq'] if x in real.index else np.nan)
+    d_unique['Freqüència'] = d_unique['Exemple'].apply(lambda x: real.loc[x, 'freq'] if x in real.index else 0)
     d_unique['Diferència'] =  d_unique['Probabilitat'] - d_unique['Freqüència']
     #d_unique = d_unique.sort_values(by='Diferència')
     #d_unique.index = range(1, len(d_unique) + 1)
@@ -352,6 +295,32 @@ if __name__ == "__main__":
 
     # Desa el DataFrame a un fitxer Excel
     d_unique.to_excel("compared/compare_results_normalized_prob_freq.xlsx", index=True)
+
+    # Genera un gràfic que contrasti la probabilitat calculada amb la freqüència real
+    # Ordena els valors per freqüència
+    d_unique = d_unique.sort_values(by='Freqüència', ascending=False)
+    d_unique.index = range(1, len(d_unique) + 1)
+    plt.plot(d_unique['Freqüència'], label='Freqüència')
+    plt.plot(d_unique['Probabilitat'], label='Probabilitat')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("compared/prob_freq.png", dpi=600)
+    plt.close()
+
+    # Calcula la precsisió de la probabilitat a partir de la diferència. Després, normalitza els valors, el que presenti menys diferència serà el més precís (més acostat a 1).
+    d_unique['Precisió'] = 1 - abs(d_unique['Diferència'])
+    d_unique['Precisió'] = d_unique['Precisió'] / d_unique['Precisió'].sum()
+    d_unique = d_unique.sort_values(by='Precisió', ascending=False)
+    d_unique.index = range(1, len(d_unique) + 1)
+    print(tabulate(d_unique, headers='keys', tablefmt='psql'))
+
+    # Mostra-ho en un gràfic amb cada patró a l'eix X
+    plt.figure(figsize=(10, 6))
+    plt.plot(d_unique['Precisió'])
+    x_values = [f"{x} ({round(y, 2)})" for x, y in zip(d_unique['Exemple'], d_unique['Freqüència'])]
+    plt.xticks(range(1, len(d_unique) + 1), x_values, rotation=90)
+    plt.tight_layout()
+    plt.savefig("compared/precision.png", dpi=600)
 
     # A partir dels valors reals i els de d compta quins casos de d no apareixen a real.
     d = deepcopy(d)
