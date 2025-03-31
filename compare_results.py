@@ -54,9 +54,7 @@ def plot_stress(df):
     plt.close()
 
     # Compara la mitjana de cada generador amb la mitjana real
-    real = [23.93998628, 55.66301726, 32.91118477, 62.76294145, 15.94435333, 71.88584774, 22.50826433, 76.41943222,
-            5.379046379, 100]
-
+    real = [23.93998628,	55.66301726,	32.91118477,	62.76294145,	15.94435333,	71.88584774,	22.50826433,	76.41943222,	5.379046379,	100]
 
     for generator in df['Generador'].unique():
         df_gen = df[df['Generador'] == generator]
@@ -189,6 +187,80 @@ def soroll(dnum):
     plot_stress(dnum)
     print("-" * 50)
 
+def false_positives_test(dfs):
+    # Genera un DF amb els patrons de cada generador
+    patterns = []
+    for generator in dfs:
+        for index, row in generator.iterrows():
+            patterns.append(row['Exemple'])
+    patterns = list(set(patterns))
+
+    # Genera un DF amb els patrons reals
+    real = pd.read_excel("compared/real.xlsx")
+    real = real['patró'].tolist()
+
+    # Genera un DF que identifica els patrons de cada generador que:
+    # 1) Són generats i apareixen en les dades reals (true positives) [x] [x]
+    # 2) Són generats i no apareixen en les dades reals (false positives) [x] [ ]
+    # 3) No són generats i apareixen en les dades reals (false negatives) [ ] [x]
+
+    patrons = patterns + real
+    patrons = list(set(patrons))
+    results = []
+    for pattern in patrons: # Per a cada patró
+        for generator in dfs: # Per a cada generador
+            if pattern in generator['Exemple'].values: # Si el patró és generat pel generador
+                if pattern in real: # Si el patró també és real
+                    results.append([pattern, generator['Generador'].values[0], 'TP']) # True Positive
+                else: # Si el patró no és real
+                    results.append([pattern, generator['Generador'].values[0], 'FP']) # False Positive
+            else: # Si el patró no és generat pel generador
+                if pattern in real: # Si el patró és real
+                    results.append([pattern, generator['Generador'].values[0], 'FN']) # False Negative
+
+
+    results = pd.DataFrame(results, columns=['Patró', 'Generador', 'Resultat'])
+    results.index = range(1, len(results) + 1)
+    print(tabulate(results, headers='keys', tablefmt='psql'))
+
+    # Ara disposa-ho en un DataFrame que tengui l'estructura següent:
+    # Generador | TP | FP | FN | Precision | Recall | F1
+    # On:
+    # Precision = TP / (TP + FP)
+    # Recall = TP / (TP + FN)
+    # F1 = 2 * (Precision * Recall) / (Precision + Recall)
+
+    # Genera un DF amb els valors de TP, FP i FN per a cada generador
+    df_results = []
+    for generator in dfs:
+        tp = len(results[(results['Generador'] == get_var_name(generator)) & (results['Resultat'] == 'TP')])
+        fp = len(results[(results['Generador'] == get_var_name(generator)) & (results['Resultat'] == 'FP')])
+        fn = len(results[(results['Generador'] == get_var_name(generator)) & (results['Resultat'] == 'FN')])
+        df_results.append([get_var_name(generator), tp, fp, fn])
+
+    print(tabulate(df_results, headers=['Generador', 'True Positive', 'False Positive', 'False Negative'], tablefmt='psql'))
+
+    # Ara calcula la precisió, recall i F1 per a cada generador
+    df_results = pd.DataFrame(df_results, columns=['Generador', 'True Positive', 'False Positive', 'False Negative'])
+    df_results['Precision'] = df_results['True Positive'] / (df_results['True Positive'] + df_results['False Positive'])
+    df_results['Recall'] = df_results['True Positive'] / (df_results['True Positive'] + df_results['False Negative'])
+    df_results['F1'] = 2 * (df_results['Precision'] * df_results['Recall']) / (df_results['Precision'] + df_results['Recall'])
+    print(tabulate(df_results, headers='keys', tablefmt='psql'))
+    # Desa el DataFrame a un fitxer Excel
+    df_results.to_excel("compared/results.xlsx", index=False)
+
+    # Mostra els resultats en un gràfic
+    plt.figure(figsize=(10, 6))
+    plt.bar(df_results['Generador'], df_results['Precision'], label='Precision')
+    plt.bar(df_results['Generador'], df_results['Recall'], label='Recall')
+    plt.bar(df_results['Generador'], df_results['F1'], label='F1')
+    plt.legend()
+    plt.xticks(rotation=90)
+    plt.tight_layout()
+    plt.savefig("compared/results.png", dpi=600)
+    plt.close()
+
+
 
 if __name__ == "__main__":
     model = 'WSWSWSWSWS'
@@ -251,101 +323,49 @@ if __name__ == "__main__":
     # [0, 100...] = AT, on 0 = A i 100 = T
     d_unique['Exemple'] = d_unique['Exemple'].apply(lambda x: ''.join(['A' if y == 0 else 'T' for y in x]))
 
-
     # Del conjunt, calcula un valor de complexitat dividint el valor actual entre el nombre de generadors que han generat l'exemple
     d_unique['Complexitat'] = d_unique['Complexitat'] / d_unique['Coincidències'].apply(lambda x: len(x.split(', ')))
     d_unique = d_unique.sort_values(by='Complexitat')
     d_unique.index = range(1, len(d_unique) + 1)
     print(tabulate(d_unique, headers='keys', tablefmt='psql'))
-
     # Desa el DataFrame a un fitxer Excel
     d_unique.to_excel("compared/compare_results_normalized.xlsx", index=True)
-
-    # Ara calcula la probabilitat de cada generador de generar un exemple.
-    """## Fórmula per calcular la probabilitat ajustada
-        La fórmula usada per calcular la probabilitat ajustada \( P'(i) \) de cada exemple \( i \) és:
-        \[ P'(i) = \frac{C(i) \times \frac{1}{1 + \text{Complexitat}(i)}}{N'} \]
-        ### On:
-        - \( P'(i) \) és la probabilitat ajustada de l'exemple \( i \).
-        - \( C(i) \) és el nombre de coincidències per l'exemple \( i \).
-        - \( \text{Complexitat}(i) \) és la complexitat de l'exemple \( i \).
-        - \( N' \) és la suma de totes les coincidències ajustades del conjunt de dades."""
-    # Per a cada exemple compta el nombre de generadors que l'han generat
-    d_unique['Coincidències'] = d_unique['Coincidències'].apply(lambda x: len(x.split(', ')))
-    # Ajusta la complexitat sumant-hi 1
-    d_unique['Complexitat'] = d_unique['Complexitat'] + 1
-    # Calcula la probabilitat: (nombre de generadors de l'exemple  / complexitat de l'exemple) / suma total de coincidències
-    d_unique['Probabilitat'] = d_unique['Coincidències'] / d_unique['Complexitat'] / d_unique['Coincidències'].sum() * 1000
-    d_unique = d_unique.sort_values(by='Probabilitat', ascending=False)
-    d_unique.index = range(1, len(d_unique) + 1)
-    print(tabulate(d_unique, headers='keys', tablefmt='psql'))
-    d_unique.to_excel("compared/compare_results_normalized_prob.xlsx", index=True)
-
-    # Ara compara la probabilitat de cada patró amb la freqüència real d'aparició de cada patró.
-    # Obté els valors reals de l'excel 'real.xlsx'
+    ##############################################################################
+    false_positives_test(dfs)
+    ##############################################################################
+    # Ara investiga si hi ha una correlació entre la complexitat dels patrons generats i la freqüència real dels patrons
     real = pd.read_excel("compared/real.xlsx")
-    real = real.set_index('patró')
 
-    # Ara cerca els valors de d_unique a real i calcula la diferència entre la probabilitat real i la calculada. Pot ser que els valors no hi siguin, si no hi són defineix la freqüència com el valor NaN.
-    d_unique['Freqüència'] = d_unique['Exemple'].apply(lambda x: real.loc[x, 'freq'] if x in real.index else 0)
-    d_unique['Diferència'] =  d_unique['Probabilitat'] - d_unique['Freqüència']
-    #d_unique = d_unique.sort_values(by='Diferència')
-    #d_unique.index = range(1, len(d_unique) + 1)
+    # Per a cada patró generat registra la freqüència real del patró
+    freqs = []
+    for index, row in d_unique.iterrows():
+        freq = real[real['patró'] == row['Exemple']]['freq'].values
+        if len(freq) == 0:
+            freqs.append(0)
+        else:
+            freqs.append(freq[0])
+    d_unique['Freqüència'] = freqs
+
     print(tabulate(d_unique, headers='keys', tablefmt='psql'))
+    d_unique.to_excel("compared/compare_results_normalized_freq.xlsx", index=True)
 
-    # Desa el DataFrame a un fitxer Excel
-    d_unique.to_excel("compared/compare_results_normalized_prob_freq.xlsx", index=True)
 
-    # Genera un gràfic que contrasti la probabilitat calculada amb la freqüència real
-    # Ordena els valors per freqüència
-    d_unique = d_unique.sort_values(by='Freqüència', ascending=False)
-    d_unique.index = range(1, len(d_unique) + 1)
-    plt.plot(d_unique['Freqüència'], label='Freqüència')
-    plt.plot(d_unique['Probabilitat'], label='Probabilitat')
-    plt.legend()
+    # Calcula la correlació entre la complexitat i la freqüència
+    correlation = d_unique['Complexitat'].corr(d_unique['Freqüència'], method='pearson')
+    print(f"Correlació entre complexitat i freqüència: {correlation:.4f}")
+
+    # Mostra la correlació en un gràfic amb la línia de regressió i el valor de R
+    plt.scatter(d_unique['Complexitat'], d_unique['Freqüència'])
+    plt.plot(np.unique(d_unique['Complexitat']), np.poly1d(np.polyfit(d_unique['Complexitat'], d_unique['Freqüència'], 1))(np.unique(d_unique['Complexitat'])), color='red')
+    plt.text(0.1, 0.9, f"R= {correlation:.2f}", transform=plt.gca().transAxes)
+    plt.xlabel('Complexitat')
+    plt.ylabel('Freqüència')
     plt.tight_layout()
-    plt.savefig("compared/prob_freq.png", dpi=600)
+    plt.savefig("compared/correlation.png", dpi=600)
     plt.close()
 
-    # Calcula la precsisió de la probabilitat a partir de la diferència. Després, normalitza els valors, el que presenti menys diferència serà el més precís (més acostat a 1).
-    d_unique['Precisió'] = 1 - abs(d_unique['Diferència'])
-    d_unique['Precisió'] = d_unique['Precisió'] / d_unique['Precisió'].sum()
-    d_unique = d_unique.sort_values(by='Precisió', ascending=False)
-    d_unique.index = range(1, len(d_unique) + 1)
-    print(tabulate(d_unique, headers='keys', tablefmt='psql'))
 
-    # Mostra-ho en un gràfic amb cada patró a l'eix X
-    plt.figure(figsize=(10, 6))
-    plt.plot(d_unique['Precisió'])
-    x_values = [f"{x} ({round(y, 2)})" for x, y in zip(d_unique['Exemple'], d_unique['Freqüència'])]
-    plt.xticks(range(1, len(d_unique) + 1), x_values, rotation=90)
-    plt.tight_layout()
-    plt.savefig("compared/precision.png", dpi=600)
 
-    # A partir dels valors reals i els de d compta quins casos de d no apareixen a real.
-    d = deepcopy(d)
-    dn = d.drop_duplicates(subset='Exemple')
-    dn.index = range(1, len(dn) + 1)
-    dn['Exemple'] = dn['Exemple'].apply(lambda x: ''.join(['A' if y == 0 else 'T' for y in x]))
-    # Afegeix la columna 'Apareix al real' amb True si l'exemple apareix a real i False si no.
-    dn['Apareix al real'] = dn['Exemple'].apply(lambda x: x in real.index)
-
-    # Retorna el nombre de casos que apareixen a real i el nombre de casos que no.
-    print("-" * 50)
-    print(dn['Apareix al real'].value_counts())
-    print("=" * 50)
-    print(tabulate(dn, headers='keys', tablefmt='psql'))
-
-    # Per a cada generador, calcula quants dels seus exemples apareixen a real
-    print("-" * 50)
-    d['Exemple'] = d['Exemple'].apply(lambda x: ''.join(['A' if y == 0 else 'T' for y in x]))
-    d['Apareix al real'] = d['Exemple'].apply(lambda x: x in real.index)
-    print(d.groupby('Generador')['Apareix al real'].value_counts())
-    # Percentatge de precisió (nombre de casos que apareixen a real / nombre de casos generats pel generador)
-    print("-" * 50)
-    print(d.groupby('Generador')['Apareix al real'].value_counts(normalize=True))
-
-    print("=" * 50)
 
 
 
