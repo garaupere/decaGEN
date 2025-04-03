@@ -1,0 +1,13 @@
+Corpus (patrons): 167
+Corpus drop (patrons): 42
+Diferència de patrons: 125
+Percentils de freqüència real:
+0.25     1.0
+0.50     5.0
+0.75    28.5
+Name: Freqüència, dtype: float64
+Suma freqüència total del corpus: 25175
+Suma freqüència valors per sobre del segon percentil: 24507
+Suma freqüència valors residuals: 668
+Percentatge dels valors per sobre del segon percentil: 97.35%
+Percentatge dels valors residuals: 2.65%

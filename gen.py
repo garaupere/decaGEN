@@ -92,6 +92,15 @@ def dols2006():
     return list(set(patterns))
 
 
+def garau2025():
+    gen_patterns = ['XXXXXXXXXS']
+    patterns = []
+    for pattern in gen_patterns:
+        result = gen(pattern)
+        patterns.extend(result)
+    return list(set(patterns))
+
+
 if __name__ == '__main__':
     o1980 = oliva1980()
     print("-" * 20, "Oliva 1980", f'({len(o1980)})', "-" * 20)

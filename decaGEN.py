@@ -34,3 +34,4 @@ if __name__ == "__main__":
     grammar(model, gen.oliva1992b, eval.oliva1992b)
     grammar(model, gen.dols2006, eval.oliva1980)
     grammar(model, gen.oliva2008, eval.oliva1980)
+    grammar(model, gen.garau2025, eval.oliva1980)

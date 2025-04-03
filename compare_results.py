@@ -1,4 +1,5 @@
 """Un mòdul per a comparar els resultats dels diferents generadors i avaluadors."""
+import re
 from copy import deepcopy
 
 import numpy as np
@@ -8,7 +9,46 @@ from tabulate import tabulate
 
 import gen
 import eval
+import proves
 from decaGEN import grammar
+
+
+def obtain_real_patterns():
+    corpus = pd.read_excel("compared/corpus.xlsx")
+
+    # Genera un patró numèric per cada patró comparatiu del corpus, A=0, T=1
+    corpus['npattern'] = corpus['patró comparatiu'].apply(lambda x: ''.join(['0' if y == 'A' else '1' for y in x]))
+
+    df_freq = corpus[['patró comparatiu', 'npattern', 'autor']]
+
+    print('-' * 20, 'Patrons del corpus', '-' * 20)
+    print(tabulate(df_freq, headers='keys', tablefmt='psql'))
+
+    # Afegeix una columna amb una llista dels autors que generen cada patró i elimina els duplicats
+    df_freq['Autors'] = df_freq['patró comparatiu'].apply(
+        lambda x: ', '.join(df_freq[df_freq['patró comparatiu'] == x]['autor'].unique()))
+
+    # Ara compta la freqüència de cada patró comparatiu
+    df_freq['Freqüència'] = df_freq.groupby('patró comparatiu')['patró comparatiu'].transform('count')
+
+    df_freq.drop_duplicates(subset='patró comparatiu', inplace=True)
+    df_freq.index = range(1, len(df_freq) + 1)
+
+    # Elimina la columna 'autor'
+    df_freq.drop(columns='autor', inplace=True)
+
+    # Afegeix una columna amb el recompte d'autors
+    df_freq["Nombre d'autors"] = df_freq['Autors'].apply(lambda x: len(x.split(', ')))
+
+    print('=' * 20, 'Corpus de freqüències', '=' * 20)
+    print(tabulate(df_freq, headers='keys', tablefmt='psql'))
+    # Desa-ho en un fitxer Excel
+    df_freq.to_excel("compared/corpus_patterns.xlsx", index=True)
+
+    # Calcula el valor mitjà de tonicitat per síl·laba dels patrons del corpus
+    mitjana_corpus = list(corpus['npattern'].apply(lambda x: [0 if y == '0' else 1 for y in x]).apply(pd.Series).mean())
+    print(mitjana_corpus)
+    return df_freq, mitjana_corpus, corpus
 
 
 def stress(pattern):
@@ -28,9 +68,8 @@ def convert_df(df):
     return df
 
 
-def plot_stress(df):
+def plot_stress(df, mitjana_real, versio):
     """Per a cada generador del DF, obtén la mitjana de tonicitat per síl·laba i fes un gràfic amb tots els valors"""
-    df_original = df.copy()
 
     x_values = np.arange(1, 11)
     for generator in df['Generador'].unique():
@@ -41,31 +80,29 @@ def plot_stress(df):
     plt.legend()
     plt.xticks(np.arange(0, 11))
     plt.tight_layout()
-    plt.savefig("compared/stress.png", dpi=600)
+    plt.savefig(f"compared/stress{versio}.png", dpi=600)
     plt.close()
 
-    #Ara calcula la mitjana de tonicitat per síl·laba de tots els generadors i fes un gràfic amb el valor mitjà de cada síl·laba i la std
+    # Ara calcula la mitjana de tonicitat per síl·laba de tots els generadors i fes un gràfic amb el valor mitjà de cada síl·laba i la std
     x_values = np.arange(1, 11)
-    values = df['Exemple'].apply(pd.Series).mean()
+    values = df['Exemple'].apply(pd.Series).count() / len(df)
     plt.plot(x_values, values, color='blue')
     plt.xticks(np.arange(0, 11))
     plt.tight_layout()
-    plt.savefig("compared/stress_mean.png", dpi=600)
+    plt.savefig(f"compared/stress_mean{versio}.png", dpi=600)
     plt.close()
 
     # Compara la mitjana de cada generador amb la mitjana real
-    real = [23.93998628,	55.66301726,	32.91118477,	62.76294145,	15.94435333,	71.88584774,	22.50826433,	76.41943222,	5.379046379,	100]
-
     for generator in df['Generador'].unique():
         df_gen = df[df['Generador'] == generator]
         values = df_gen['Exemple'].apply(pd.Series).mean()
         plt.plot(x_values, values, label=generator)
 
-    plt.plot(x_values, real, color='red', label='Real', linestyle='--')
+    plt.plot(x_values, mitjana_real, color='red', label='Real', linestyle='--')
     plt.legend()
     plt.xticks(np.arange(0, 11))
     plt.tight_layout()
-    plt.savefig("compared/comparison.png", dpi=600)
+    plt.savefig(f"compared/comparison{versio}.png", dpi=600)
     plt.close()
 
     # Desa els valors en un fitxer Excel
@@ -75,28 +112,24 @@ def plot_stress(df):
         values = df_gen['Exemple'].apply(pd.Series).mean()
         npdf[generator] = values
     npdf = npdf.T
-    real_series = pd.Series(real, name='Real')
+    real_series = pd.Series(mitjana_real, name='Real')
     npdf = npdf._append(real_series)
-    npdf.to_excel("compared/comparison.xlsx", index=True)
-
-
-
+    npdf.to_excel(f"compared/comparison{versio}.xlsx", index=True)
 
     # Ara compararam la mitjana teòrica amb la real
-    plt.plot(x_values, values, color='red', label='Real')
-    plt.plot(x_values, real, color='blue', label='Teòric')
+    plt.plot(x_values, values, color='red', label='Teòric')
+    plt.plot(x_values, mitjana_real, color='blue', label='Real')
     # Dibuixa la distància entre els valors teòrics i reals
-    plt.fill_between(x_values, values, real, color='lightblue', alpha=0.2)
+    plt.fill_between(x_values, values, mitjana_real, color='lightblue', alpha=0.2)
     # Escriu els valors de la distància
-    for i, txt in enumerate(abs(np.subtract(real, values))):
-        plt.annotate(f"{txt:.2f}", (x_values[i], values[i]), textcoords="offset points", xytext=(0, 10), ha='center')
+    # for i, txt in enumerate(abs(np.subtract(mitjana_real, values))):
+    #    plt.annotate(f"{txt:.2f}", (x_values[i], values[i]), textcoords="offset points", xytext=(0, 10), ha='center')
 
     plt.legend()
     plt.xticks(np.arange(0, 11))
     plt.tight_layout()
-    plt.savefig("compared/stress_mean_comparison.png", dpi=600)
+    plt.savefig(f"compared/stress_mean_comparison{versio}.png", dpi=600)
     plt.close()
-
 
     # Ara comparam les mitjanes de cada generador amb la mitjana teòrica i en calculam la diferència. En el gràfic. L'eix Y serà la diferència. A X el valor de la mitjana real serà representat per [0, 0, 0, 0, 0, 0 ,0, 0, 0, 0] i així podrem veure la diferència.
 
@@ -104,7 +137,7 @@ def plot_stress(df):
     for generator in df['Generador'].unique():
         df_gen = df[df['Generador'] == generator]
         values = df_gen['Exemple'].apply(pd.Series).mean()
-        diff = [abs(x) for x in np.subtract(real, values)]
+        diff = [abs(x) for x in np.subtract(mitjana_real, values)]
         diffs.append([generator, diff])
         plt.plot(x_values, diff, label=generator)
 
@@ -112,9 +145,8 @@ def plot_stress(df):
     plt.legend()
     plt.xticks(np.arange(0, 11))
     plt.tight_layout()
-    plt.savefig("compared/stress_mean_diff.png", dpi=600)
+    plt.savefig(f"compared/stress_mean_diff{versio}.png", dpi=600)
     plt.close()
-
 
     ndiffs = []
     for diff in diffs:
@@ -127,6 +159,7 @@ def plot_stress(df):
     diffs = sorted(ndiffs, key=lambda x: x[2])
     df = pd.DataFrame(ndiffs, columns=['Generador', 'Diferència', 'Mitjana']).drop(columns='Diferència')
     df.index = range(1, len(df) + 1)
+    print('-' * 20, f'Diferència{versio}', '-' * 20)
     print(tabulate(df, headers='keys', tablefmt='psql'))
 
     # Calcula l'accuracy de cada generador
@@ -141,32 +174,8 @@ def plot_stress(df):
     accuracies = sorted(accuracies, key=lambda x: x[1], reverse=True)
     df = pd.DataFrame(accuracies, columns=['Generador', 'Accuracy'])
     df.index = range(1, len(df) + 1)
+    print('-' * 20, f'Accuracy{versio}', '-' * 20)
     print(tabulate(df, headers='keys', tablefmt='psql'))
-
-
-
-def add_soroll(df):
-    """Afegeix soroll als valors teòrics. Es calcula un valor de potència per a cada patró a partir del valor de complexitat.
-    potència = (10-complexitat) * 100"""
-
-    soroll = []
-    for index, row in df.iterrows():
-        complexitat = row['Complexitat']
-        soroll.append((10 - complexitat) * 100)
-    df['Soroll'] = soroll
-
-    # Ara repeteix els patrons tantes vegades com indica la potència
-    new_df = pd.DataFrame()
-    for index, row in df.iterrows():
-        for i in range(int(row['Soroll'])):
-            new_df = new_df._append(row)
-            print(row)
-    new_df = new_df.drop(columns='Soroll')
-    new_df.index = range(1, len(new_df) + 1)
-    # Desa-ho en un fitxer Excel
-    new_df.to_excel("compared/with_soroll.xlsx", index=False)
-    return new_df
-
 
 
 def get_var_name(variable):
@@ -175,19 +184,7 @@ def get_var_name(variable):
             return name
 
 
-def soroll(dnum):
-    # Soroll
-    print("-" * 50)
-    print("Soroll")
-    print("-" * 50)
-    dnum = add_soroll(dnum)
-    print(tabulate(dnum, headers='keys', tablefmt='psql'))
-
-    # A partir de les dades amb soroll fes la comparativa
-    plot_stress(dnum)
-    print("-" * 50)
-
-def false_positives_test(dfs):
+def false_positives_test(dfs, real, versio):
     # Genera un DF amb els patrons de cada generador
     patterns = []
     for generator in dfs:
@@ -196,8 +193,7 @@ def false_positives_test(dfs):
     patterns = list(set(patterns))
 
     # Genera un DF amb els patrons reals
-    real = pd.read_excel("compared/real.xlsx")
-    real = real['patró'].tolist()
+    real = real['patró comparatiu'].tolist()
 
     # Genera un DF que identifica els patrons de cada generador que:
     # 1) Són generats i apareixen en les dades reals (true positives) [x] [x]
@@ -207,21 +203,23 @@ def false_positives_test(dfs):
     patrons = patterns + real
     patrons = list(set(patrons))
     results = []
-    for pattern in patrons: # Per a cada patró
-        for generator in dfs: # Per a cada generador
-            if pattern in generator['Exemple'].values: # Si el patró és generat pel generador
-                if pattern in real: # Si el patró també és real
-                    results.append([pattern, generator['Generador'].values[0], 'TP']) # True Positive
-                else: # Si el patró no és real
-                    results.append([pattern, generator['Generador'].values[0], 'FP']) # False Positive
-            else: # Si el patró no és generat pel generador
-                if pattern in real: # Si el patró és real
-                    results.append([pattern, generator['Generador'].values[0], 'FN']) # False Negative
-
+    for pattern in patrons:  # Per a cada patró
+        for generator in dfs:  # Per a cada generador
+            if pattern in generator['Exemple'].values:  # Si el patró és generat pel generador
+                if pattern in real:  # Si el patró també és real
+                    results.append([pattern, generator['Generador'].values[0], 'TP'])  # True Positive
+                else:  # Si el patró no és real
+                    results.append([pattern, generator['Generador'].values[0], 'FP'])  # False Positive
+            else:  # Si el patró no és generat pel generador
+                if pattern in real:  # Si el patró és real
+                    results.append([pattern, generator['Generador'].values[0], 'FN'])  # False Negative
 
     results = pd.DataFrame(results, columns=['Patró', 'Generador', 'Resultat'])
     results.index = range(1, len(results) + 1)
-    print(tabulate(results, headers='keys', tablefmt='psql'))
+
+    # Desa el DataFrame a un fitxer Excel
+    results.to_excel(f"compared/results_full{versio}.xlsx", index=False)
+    test_results = deepcopy(results)
 
     # Ara disposa-ho en un DataFrame que tengui l'estructura següent:
     # Generador | TP | FP | FN | Precision | Recall | F1
@@ -238,16 +236,19 @@ def false_positives_test(dfs):
         fn = len(results[(results['Generador'] == get_var_name(generator)) & (results['Resultat'] == 'FN')])
         df_results.append([get_var_name(generator), tp, fp, fn])
 
-    print(tabulate(df_results, headers=['Generador', 'True Positive', 'False Positive', 'False Negative'], tablefmt='psql'))
+    print('-' * 20, f'Results{versio}', '-' * 20)
+    print(tabulate(df_results, headers=['Generador', 'True Positive', 'False Positive', 'False Negative'],
+                   tablefmt='psql'))
 
     # Ara calcula la precisió, recall i F1 per a cada generador
     df_results = pd.DataFrame(df_results, columns=['Generador', 'True Positive', 'False Positive', 'False Negative'])
     df_results['Precision'] = df_results['True Positive'] / (df_results['True Positive'] + df_results['False Positive'])
     df_results['Recall'] = df_results['True Positive'] / (df_results['True Positive'] + df_results['False Negative'])
-    df_results['F1'] = 2 * (df_results['Precision'] * df_results['Recall']) / (df_results['Precision'] + df_results['Recall'])
+    df_results['F1'] = 2 * (df_results['Precision'] * df_results['Recall']) / (
+                df_results['Precision'] + df_results['Recall'])
     print(tabulate(df_results, headers='keys', tablefmt='psql'))
     # Desa el DataFrame a un fitxer Excel
-    df_results.to_excel("compared/results.xlsx", index=False)
+    df_results.to_excel(f"compared/results{versio}.xlsx", index=False)
 
     # Mostra els resultats en un gràfic
     plt.figure(figsize=(10, 6))
@@ -257,9 +258,106 @@ def false_positives_test(dfs):
     plt.legend()
     plt.xticks(rotation=90)
     plt.tight_layout()
-    plt.savefig("compared/results.png", dpi=600)
+    plt.savefig(f"compared/results{versio}.png", dpi=600)
     plt.close()
 
+    detall(test_results, versio)
+
+    return test_results
+
+
+def detall(fp, versio):
+    # Per a cada Patró identifica els generadors que han generat el patró
+    # Mostra en una nova columna ('Coincidències') si el resultat d'un generador és generat també per altres generadors. Indica-hi quins.
+    fp['Generadors'] = fp['Patró'].apply(lambda x: ', '.join(fp[fp['Patró'] == x]['Generador'].unique()))
+
+    # Ara elimina els patrons duplicats
+    fp = fp.drop_duplicates(subset='Patró')
+    fp = fp.drop(columns='Generador')
+
+    # Per a cada FP compta les seqüències de 'T' i 'A' consecutives
+    # Fes servir re.findall per a trobar totes les seqüències de 'T' i 'A' consecutives
+    # Afegeix dues columnes al DF: 'T' i 'A' amb el recompte de seqüències de 'T' i 'A' respectivament
+    for index, row in fp.iterrows():
+        xocs = len(re.findall('TT', row['Patró'])) + len(re.findall('TTT', row['Patró']))
+        valls = len(re.findall('AAA', row['Patró'])) + len(re.findall('AAAA', row['Patró']))
+        posicions = []
+        for i in range(0, len(row['Patró']) - 1):
+            if row['Patró'][i] == 'T':
+                posicions.append(i + 1)
+        posicions = ', '.join(map(str, posicions))
+        fp.loc[index, 'Xocs'] = xocs
+        fp.loc[index, 'Valls'] = valls
+        fp.loc[index, 'Posicions'] = posicions
+
+    fp.index = range(1, len(fp) + 1)
+    print(tabulate(fp, headers='keys', tablefmt='psql'))
+    print(f'Mitjana de xocs: {fp["Xocs"].mean()}')
+    print(f'Mitjana de valls: {fp["Valls"].mean()}')
+
+    # Desa el DataFrame a un fitxer Excel
+    fp.to_excel(f"compared/detall{versio}.xlsx", index=False)
+
+
+def correlacions(d_unique, real, versio):
+    # Investiga si hi ha una correlació entre la complexitat dels patrons generats i la freqüència real dels patrons
+    # Per a cada patró generat registra la freqüència real del patró
+    freqs = []
+    for index, row in d_unique.iterrows():
+        freq = real[real['patró comparatiu'] == row['Exemple']]['Freqüència'].values
+        if len(freq) == 0:
+            freqs.append(0)
+        else:
+            freqs.append(freq[0])
+    d_unique['Freqüència'] = freqs
+
+    print(tabulate(d_unique, headers='keys', tablefmt='psql'))
+    d_unique.to_excel(f"compared/compare_results_normalized_freq{versio}.xlsx", index=True)
+
+    # Calcula la correlació entre la complexitat i la freqüència
+    correlation = d_unique['Complexitat'].corr(d_unique['Freqüència'], method='pearson')
+    print(f"Correlació entre complexitat i freqüència: {correlation:.4f}")
+
+    # Mostra la correlació en un gràfic amb la línia de regressió i el valor de R
+    plt.scatter(d_unique['Complexitat'], d_unique['Freqüència'])
+    plt.plot(np.unique(d_unique['Complexitat']),
+             np.poly1d(np.polyfit(d_unique['Complexitat'], d_unique['Freqüència'], 1))(
+                 np.unique(d_unique['Complexitat'])), color='red')
+    plt.text(0.1, 0.9, f"R= {correlation:.2f}", transform=plt.gca().transAxes)
+    plt.xlabel('Complexitat')
+    plt.ylabel('Freqüència')
+    plt.tight_layout()
+    plt.savefig(f"compared/correlation{versio}.png", dpi=600)
+    plt.close()
+
+    # Ara investiga si hi ha una correlació entre el nombre de generadors que han generat un patró i la freqüència real dels patrons
+    # Per a cada patró generat registra el nombre de generadors que han generat el patró
+    freqs = []
+    for index, row in d_unique.iterrows():
+        freq = real[real['patró comparatiu'] == row['Exemple']]['Freqüència'].values
+        if len(freq) == 0:
+            freqs.append(0)
+        else:
+            freqs.append(freq[0])
+    d_unique['Freqüència'] = freqs
+
+    # Calcula la correlació entre el nombre de generadors i la freqüència
+    correlation = d_unique['Coincidències'].apply(lambda x: len(x.split(', '))).corr(d_unique['Freqüència'],
+                                                                                     method='pearson')
+    print(f"Correlació entre nombre de generadors i freqüència: {correlation:.4f}")
+
+    # Mostra la correlació en un gràfic amb la línia de regressió i el valor de R
+    plt.scatter(d_unique['Coincidències'].apply(lambda x: len(x.split(', '))), d_unique['Freqüència'])
+    x_values = np.unique(d_unique['Coincidències'].apply(lambda x: len(x.split(', '))))
+    y_values = np.poly1d(
+        np.polyfit(d_unique['Coincidències'].apply(lambda x: len(x.split(', '))), d_unique['Freqüència'], 1))(x_values)
+    plt.plot(x_values, y_values, color='red')
+    plt.text(0.1, 0.9, f"R= {correlation:.2f}", transform=plt.gca().transAxes)
+    plt.xlabel('Nombre de Generadors')
+    plt.ylabel('Freqüència')
+    plt.tight_layout()
+    plt.savefig(f"compared/correlation_generators{versio}.png", dpi=600)
+    plt.close()
 
 
 if __name__ == "__main__":
@@ -269,13 +367,12 @@ if __name__ == "__main__":
     o1992b = grammar(model, gen.oliva1992b, eval.oliva1992b)
     d2006 = grammar(model, gen.dols2006, eval.oliva1980)
     o2008 = grammar(model, gen.oliva2008, eval.oliva1980)
+    # g2025 = grammar(model, gen.garau2025, eval.oliva1980)
 
     # Substitueix els valors de complexitat de d2006 per 0
     d2006['Complexitat'] = 0
-
     # Per a o1992b substitueix en els exemples els valors de 't' per 'T'.
     o1992b['Exemple'] = o1992b['Exemple'].apply(lambda x: x.replace('t', 'T'))
-
     # Per a o1992b calcula la complexitat mitjana dels exemples duplicats i després elimina els duplicats.
     o1992b['Complexitat'] = o1992b.groupby('Exemple')['Complexitat'].transform('mean')
     o1992b = o1992b.drop_duplicates(subset='Exemple')
@@ -289,11 +386,14 @@ if __name__ == "__main__":
 
     # Concatena tots els DFs en un de sol
     d = pd.concat(dfs, axis=0).fillna(0)
+    d_original = deepcopy(d)
+    print('-' * 20, 'Dades originals', '-' * 20)
+    print(tabulate(d, headers='keys', tablefmt='psql'))
 
     # Mostra en una nova columna ('Coincidències') si el resultat d'un generador és generat també per altres generadors. Indica-hi quins.
     d['Coincidències'] = d['Exemple'].apply(lambda x: ', '.join(d[d['Exemple'] == x]['Generador'].unique()))
 
-    # Elimina les columnes supèrflues (conserva només: índex, generador, exemple, complexitat, coincidències)
+    # Elimina les columnes supèrflues (conserva només: índex, exemple, complexitat, coincidències)
     d = d[['Generador', 'Exemple', 'Complexitat', 'Coincidències']]
 
     print(tabulate(d, headers='keys', tablefmt='psql'))
@@ -303,13 +403,49 @@ if __name__ == "__main__":
     print(d.groupby('Generador').size())
     print("-" * 50)
 
+    corpus_raw = obtain_real_patterns()
+    corpus = corpus_raw[0]
+    mitjana_real = corpus_raw[1]
+    corpus_raw = corpus_raw[2]
+
+
+    # Mostra els percentils de freqüència real
+    percentils = corpus['Freqüència'].quantile([0.25, 0.5, 0.75])
+    print('Percentils de freqüència real:\n', percentils)
+
+    # Elimina els casos que tenguin una freqüència inferior al tercer percentil
+    corpus_drop = corpus[corpus['Freqüència'] >= percentils[0.75]]
+
+    # Mostra la diferència de mida entre corpus i corpus_drop
+    print("-" * 20, 'Diferència de mida entre corpus i corpus_drop', "-" * 20)
+    print(len(corpus), len(corpus_drop), 'Diferència:', len(corpus) - len(corpus_drop))
+    # Desa-ho en un txt
+    with open("compared/compared_lenghts.txt", "w") as f:
+        f.write(f"Corpus (patrons): {len(corpus)}\n")
+        f.write(f"Corpus drop (patrons): {len(corpus_drop)}\n")
+        f.write(f"Diferència de patrons: {len(corpus) - len(corpus_drop)}\n")
+        f.write(f'Percentils de freqüència real:\n{percentils}')
+        # Escriu la suma de la freqüència de corpus i corpus_drop
+        f.write(f"\nSuma freqüència total del corpus: {corpus['Freqüència'].sum()}\n")
+        f.write(f"Suma freqüència valors per sobre del segon percentil: {corpus_drop['Freqüència'].sum()}\n")
+        # Escriu la diferència de la suma de la freqüència entre corpus i corpus_drop
+        f.write(f"Suma freqüència valors residuals: {corpus['Freqüència'].sum() - corpus_drop['Freqüència'].sum()}\n")
+        f.write(f"Percentatge dels valors per sobre del segon percentil: {corpus_drop['Freqüència'].sum() / corpus['Freqüència'].sum() * 100:.2f}%\n")
+        f.write(f"Percentatge dels valors residuals: {(corpus['Freqüència'].sum() - corpus_drop['Freqüència'].sum()) / corpus['Freqüència'].sum() * 100:.2f}%\n")
+    f.close()
+    print("-" * 50)
+
+    mitjana_corpus_drop = list(
+        corpus_drop['npattern'].apply(lambda x: [0 if y == '0' else 1 for y in x]).apply(pd.Series).mean())
+    print(mitjana_corpus_drop)
+
+
     # Converteix els valors de text dels Exemples del DF en valors numèrics
-    dnum = convert_df(d)
-    print(tabulate(dnum, headers='keys', tablefmt='psql'))
+    #dnum = convert_df(d)
+    # print(tabulate(dnum, headers='keys', tablefmt='psql'))
 
-    # Per a cada generador del DF, obtén la mitjana de tonicitat per síl·laba i fes un gràfic amb tots els valors
-    plot_stress(dnum)
-
+    #plot_stress(dnum, mitjana_real, versio='')
+    #plot_stress(dnum, mitjana_corpus_drop, versio='_drop')
 
     # De tot el DF mostra només els exemples únics, calcula la complexitat mitjana per exemple i ordena per complexitat
     d_unique = d.drop_duplicates(subset='Exemple').sort_values(by='Complexitat')
@@ -324,49 +460,149 @@ if __name__ == "__main__":
     d_unique['Exemple'] = d_unique['Exemple'].apply(lambda x: ''.join(['A' if y == 0 else 'T' for y in x]))
 
     # Del conjunt, calcula un valor de complexitat dividint el valor actual entre el nombre de generadors que han generat l'exemple
-    d_unique['Complexitat'] = d_unique['Complexitat'] / d_unique['Coincidències'].apply(lambda x: len(x.split(', ')))
+    # d_unique['Complexitat'] = d_unique['Complexitat'] / d_unique['Coincidències'].apply(lambda x: len(x.split(', ')))
     d_unique = d_unique.sort_values(by='Complexitat')
     d_unique.index = range(1, len(d_unique) + 1)
     print(tabulate(d_unique, headers='keys', tablefmt='psql'))
     # Desa el DataFrame a un fitxer Excel
     d_unique.to_excel("compared/compare_results_normalized.xlsx", index=True)
+
     ##############################################################################
-    false_positives_test(dfs)
+    #results = false_positives_test(dfs, corpus, '')
     ##############################################################################
-    # Ara investiga si hi ha una correlació entre la complexitat dels patrons generats i la freqüència real dels patrons
-    real = pd.read_excel("compared/real.xlsx")
+    #correlacions(d_unique, corpus, versio='')
+    ##############################################################################
+    # proves.descript(d_unique)
+    ##############################################################################
 
-    # Per a cada patró generat registra la freqüència real del patró
-    freqs = []
-    for index, row in d_unique.iterrows():
-        freq = real[real['patró'] == row['Exemple']]['freq'].values
-        if len(freq) == 0:
-            freqs.append(0)
-        else:
-            freqs.append(freq[0])
-    d_unique['Freqüència'] = freqs
+    ##############################################################################
+    #results_dos = false_positives_test(dfs, corpus_drop, '_drop')
+    ##############################################################################
+    #correlacions(d_unique, corpus_drop, versio='_drop')
+    ##############################################################################
 
-    print(tabulate(d_unique, headers='keys', tablefmt='psql'))
-    d_unique.to_excel("compared/compare_results_normalized_freq.xlsx", index=True)
+    # A partir de corpus, mostra la correlació entre:
+    # El nombre d'autors que generen un patró i la freqüència del patró
 
-
-    # Calcula la correlació entre la complexitat i la freqüència
-    correlation = d_unique['Complexitat'].corr(d_unique['Freqüència'], method='pearson')
-    print(f"Correlació entre complexitat i freqüència: {correlation:.4f}")
-
-    # Mostra la correlació en un gràfic amb la línia de regressió i el valor de R
-    plt.scatter(d_unique['Complexitat'], d_unique['Freqüència'])
-    plt.plot(np.unique(d_unique['Complexitat']), np.poly1d(np.polyfit(d_unique['Complexitat'], d_unique['Freqüència'], 1))(np.unique(d_unique['Complexitat'])), color='red')
+    correlation = corpus['Nombre d\'autors'].corr(corpus['Freqüència'], method='pearson')
+    print(f"Correlació entre nombre d'autors i freqüència: {correlation:.4f}")
+    # Mostra la correlació amb un gràfic amb la línia de regressió i el valor de R
+    plt.scatter(corpus['Nombre d\'autors'], corpus['Freqüència'])
+    x_values = np.unique(corpus['Nombre d\'autors'])
+    y_values = np.poly1d(np.polyfit(corpus['Nombre d\'autors'], corpus['Freqüència'], 1))(x_values)
+    plt.plot(x_values, y_values, color='red')
     plt.text(0.1, 0.9, f"R= {correlation:.2f}", transform=plt.gca().transAxes)
-    plt.xlabel('Complexitat')
+    plt.xlabel('Nombre d\'autors')
     plt.ylabel('Freqüència')
     plt.tight_layout()
-    plt.savefig("compared/correlation.png", dpi=600)
+    plt.savefig("compared/correlation_authors.png", dpi=600)
     plt.close()
 
 
+    ###############################################################################
+
+    # Del df d_original conserva les columnes 'Exemple', 'Complexitat' i 'Generador'
+    d_original = d_original[['Exemple', 'Complexitat', 'Generador']]
+    # Per a cada patró de d_original assigna-hi la freqüència del patró en corpus
+    for index, row in d_original.iterrows():
+        freq = corpus[corpus['patró comparatiu'] == row['Exemple']]['Freqüència'].values
+        if len(freq) == 0:
+            d_original.at[index, 'Freqüència'] = 0
+        else:
+            d_original.at[index, 'Freqüència'] = freq[0]
+
+    print('-' * 20, 'Dades originals amb freqüències', '-' * 20)
+    print(tabulate(d_original, headers='keys', tablefmt='psql'))
+
+    # Compta quants de patrons genera cada generador i desa-ho en un nou DataFrame
+    gen_counts = d_original.groupby('Generador').size().reset_index(name='Counts')
+    gen_counts.index = range(1, len(gen_counts) + 1)
+    print('-' * 20, 'Counts', '-' * 20)
+    print(tabulate(gen_counts, headers='keys', tablefmt='psql'))
+
+    # Al DF d_original marca com a 'restrictius' els patrons generats pels generadors que generen menys patrons (i.e. < a la mitjana de patrons generats) i com a 'no restrictius' els altres
+    mean_counts = gen_counts['Counts'].mean()
+    d_original['Restrictiu'] = d_original['Generador'].apply(lambda x: 1 if gen_counts[gen_counts['Generador'] == x]['Counts'].values[0] < mean_counts else 0)
+    print('-' * 20, 'Dades originals amb freqüències i restrictius', '-' * 20)
+    # Ordena per freqüència
+    d_original = d_original.sort_values(by='Freqüència', ascending=False)
+    print(tabulate(d_original, headers='keys', tablefmt='psql'))
+    # Desa-ho en un fitxer Excel
+    d_original.to_excel("compared/compare_results_restrictius.xlsx", index=True)
+
+    # Mostra per a cada generador la suma de la freqüència dels patrons generats
+    gen_freq = d_original.groupby('Generador')['Freqüència'].sum().reset_index()
+    gen_freq.index = range(1, len(gen_freq) + 1)
+    print('-' * 20, 'Freqüència per generador', '-' * 20)
+    print(tabulate(gen_freq, headers='keys', tablefmt='psql'))
 
 
+    # Comprova si els generadors més restrictius generen patrons més freqüents i si els menys restrictius generen patrons menys freqüents
+    correlation = d_original['Restrictiu'].corr(d_original['Freqüència'], method='pearson')
+    print(f"Correlació entre restrictius i freqüència: {correlation:.4f}")
+    # Mostra la correlació amb un gràfic amb la línia de regressió i el valor de R
+    plt.scatter(d_original['Restrictiu'], d_original['Freqüència'])
+    x_values = np.unique(d_original['Restrictiu'])
+    y_values = np.poly1d(np.polyfit(d_original['Restrictiu'], d_original['Freqüència'], 1))(x_values)
+    plt.plot(x_values, y_values, color='red')
+    plt.text(0.1, 0.9, f"R= {correlation:.2f}", transform=plt.gca().transAxes)
+    plt.xlabel('Restrictius')
+    plt.ylabel('Freqüència')
+    plt.tight_layout()
+    plt.savefig("compared/correlation_restrictius.png", dpi=600)
+    plt.close()
+
+    # Calcula la freqüència percentual de cada patró generat
+    d_original['Freqüència (%)'] = (d_original['Freqüència'] / corpus['Freqüència'].sum()) * 100
 
 
+    # Per a cada generador fes un gràfic de dispersió en què:
+    # 1) L'eix Y representa la freqüència i complexitat de cada patró generat
+    # 2) L'eix X conté els patrons ordenats per freqüència (ascendent).
+    # 3) Cada generador té un gràfic propi
+    for generator in d_original['Generador'].unique():
+        df_gen = d_original[d_original['Generador'] == generator]
+        x_values = df_gen['Exemple'][df_gen['Freqüència (%)'].sort_values(ascending=True).index]
+        y_values = df_gen['Freqüència (%)']
+        plt.plot(x_values, y_values, label=generator)
+        plt.xlabel('Patrons')
+        plt.ylabel('Freqüència (%)')
+        plt.title(generator)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+        plt.savefig(f"compared/{generator}_complexity_frequency.png", dpi=600)
+        plt.close()
 
+
+    # Ara fes el mateix però en un sol gràfic i amb un color per a cada generador
+    plt.figure(figsize=(10, 6))
+    for generator in d_original['Generador'].unique():
+        df_gen = d_original[d_original['Generador'] == generator]
+        x_values = np.arange(1, len(df_gen) + 1)
+        y_values = df_gen['Freqüència (%)']
+        plt.plot(x_values, y_values, label=generator)
+    plt.xlabel('Patrons')
+    plt.ylabel('Freqüència (%)')
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+    plt.savefig("compared/complexity_frequency.png", dpi=600)
+    plt.close()
+
+
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    for generator in d_original['Generador'].unique():
+        df_gen = d_original[d_original['Generador'] == generator]
+        x = np.arange(1, len(df_gen) + 1)
+        y = df_gen['Freqüència (%)']
+        ax1.scatter(x, y, c='b')
+        ax2.plot(np.sort(x), np.arange(x.size), c='r')
+    ax1.set_xlabel('Patrons')
+    ax1.set_ylabel('Freqüència (%)')
+    ax2.set_ylabel('Complexitat')
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+    plt.savefig("compared/complexity_frequency.png", dpi=600)
