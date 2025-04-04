@@ -367,10 +367,10 @@ if __name__ == "__main__":
     o1992b = grammar(model, gen.oliva1992b, eval.oliva1992b)
     d2006 = grammar(model, gen.dols2006, eval.oliva1980)
     o2008 = grammar(model, gen.oliva2008, eval.oliva1980)
-    # g2025 = grammar(model, gen.garau2025, eval.oliva1980)
+    #g2025 = grammar(model, gen.garau2025, eval.oliva1980)
 
     # Substitueix els valors de complexitat de d2006 per 0
-    d2006['Complexitat'] = 0
+    #d2006['Complexitat'] = 0
     # Per a o1992b substitueix en els exemples els valors de 't' per 'T'.
     o1992b['Exemple'] = o1992b['Exemple'].apply(lambda x: x.replace('t', 'T'))
     # Per a o1992b calcula la complexitat mitjana dels exemples duplicats i després elimina els duplicats.
@@ -378,7 +378,7 @@ if __name__ == "__main__":
     o1992b = o1992b.drop_duplicates(subset='Exemple')
 
     # Inclou tots els DF en una llista
-    dfs = [o1980, o1988, o1992b, d2006, o2008]
+    dfs = [o1980, o1988, o1992b, o2008, d2006]
 
     # Per a cada DF, crea una columna amb el nom del generador
     for df in dfs:
@@ -553,7 +553,24 @@ if __name__ == "__main__":
     plt.close()
 
     # Calcula la freqüència percentual de cada patró generat
-    d_original['Freqüència (%)'] = (d_original['Freqüència'] / corpus['Freqüència'].sum()) * 100
+    d_original['Freqüència (%)'] = corpus['Freqüència'] / corpus['Freqüència'].sum() * 100
+
+    dataframes = []
+    for generator in d_original['Generador'].unique():
+        df_gen = d_original[d_original['Generador'] == generator]
+        df_gen = df_gen[['Generador', 'Exemple', 'Complexitat']]
+        dataframes.append(df_gen)
+
+    for df in dataframes:
+        df['Freqüència (%)'] = corpus[corpus['patró comparatiu'] == df['Exemple']]['Freqüència'].values
+
+    fulldf = pd.concat(dataframes, axis=0)
+    fulldf = fulldf[['Generador', 'Exemple', 'Complexitat', 'Freqüència (%)']]
+    fulldf = fulldf.sort_values(by='Freqüència (%)', ascending=False)
+    print('-' * 20, 'Dades originals amb freqüències percentuals', '-' * 20)
+    print(tabulate(fulldf, headers='keys', tablefmt='psql'))
+
+
 
 
     # Per a cada generador fes un gràfic de dispersió en què:
@@ -562,47 +579,54 @@ if __name__ == "__main__":
     # 3) Cada generador té un gràfic propi
     for generator in d_original['Generador'].unique():
         df_gen = d_original[d_original['Generador'] == generator]
-        x_values = df_gen['Exemple'][df_gen['Freqüència (%)'].sort_values(ascending=True).index]
-        y_values = df_gen['Freqüència (%)']
-        plt.plot(x_values, y_values, label=generator)
-        plt.xlabel('Patrons')
-        plt.ylabel('Freqüència (%)')
+        x_values = df_gen['Exemple'][df_gen['Freqüència (%)'].sort_values(ascending=False).index]
+        y_values = df_gen['Freqüència (%)'].sort_values(ascending=False)
+        # Escalam els valors de freqüència entre 0 i 1
+        y_values = (y_values - y_values.min()) / (y_values.max() - y_values.min())
+        plt.plot(x_values, y_values, label='Freqüència (%)')
+        # Afegeix els valors de complexitat de cada patró
+        y2_values = df_gen['Complexitat'][df_gen['Freqüència (%)'].sort_values(ascending=True).index]
+        # Escalam els valors de complexitat entre 0 i 1
+        y2_values = (y2_values - y2_values.min()) / (y2_values.max() - y2_values.min())
+        plt.plot(x_values, y2_values, label='Complexitat', linestyle='--')
+        plt.xticks(rotation=90)
         plt.title(generator)
         plt.legend()
         plt.tight_layout()
-        plt.show()
         plt.savefig(f"compared/{generator}_complexity_frequency.png", dpi=600)
         plt.close()
 
 
-    # Ara fes el mateix però en un sol gràfic i amb un color per a cada generador
     plt.figure(figsize=(10, 6))
-    for generator in d_original['Generador'].unique():
+    # Crea un plot amb subplots per a cada generador en dues columnes
+    fig, axs = plt.subplots(2, 3, figsize=(10, 7))
+    axs = axs.flatten()
+    for i, generator in enumerate(d_original['Generador'].unique()):
         df_gen = d_original[d_original['Generador'] == generator]
-        x_values = np.arange(1, len(df_gen) + 1)
-        y_values = df_gen['Freqüència (%)']
-        plt.plot(x_values, y_values, label=generator)
-    plt.xlabel('Patrons')
-    plt.ylabel('Freqüència (%)')
-    plt.legend()
+        x_values = df_gen['Exemple'][df_gen['Freqüència (%)'].sort_values(ascending=False).index]
+        y_values = df_gen['Freqüència (%)'].sort_values(ascending=False)
+        y_values = (y_values - y_values.min()) / (y_values.max() - y_values.min())
+        y2_values = df_gen['Complexitat'][df_gen['Freqüència (%)'].sort_values(ascending=True).index]
+        y2_values = (y2_values - y2_values.min()) / (y2_values.max() - y2_values.min())
+        axs[i].plot(x_values, y_values, label='Freqüència (%)')
+        axs[i].plot(x_values, y2_values, linestyle='--', label='Complexitat')
+        axs[i].set_xticklabels(x_values, rotation=90)
+        axs[i].set_title(generator)
+        #axs[i].set_xlabel('Patrons')
+        #axs[i].set_ylabel('Freqüència (%) i complexitat')
+        axs[i].legend()
     plt.tight_layout()
-    plt.show()
     plt.savefig("compared/complexity_frequency.png", dpi=600)
     plt.close()
 
 
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
-    for generator in d_original['Generador'].unique():
-        df_gen = d_original[d_original['Generador'] == generator]
-        x = np.arange(1, len(df_gen) + 1)
-        y = df_gen['Freqüència (%)']
-        ax1.scatter(x, y, c='b')
-        ax2.plot(np.sort(x), np.arange(x.size), c='r')
-    ax1.set_xlabel('Patrons')
-    ax1.set_ylabel('Freqüència (%)')
-    ax2.set_ylabel('Complexitat')
-    plt.legend()
+    # Representa la freqüència real que acumula cada generador (d_original)
+    # Ordena'ls de menor a major
+    plt.figure(figsize=(10, 6))
+    plt.bar(d_original['Generador'], d_original['Freqüència (%)'])
+    plt.xlabel('Generador')
+    plt.ylabel('Freqüència (%)')
+    plt.xticks(rotation=90)
     plt.tight_layout()
-    plt.show()
-    plt.savefig("compared/complexity_frequency.png", dpi=600)
+    plt.savefig("compared/frequency.png", dpi=600)
+    plt.close()
