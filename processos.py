@@ -274,8 +274,8 @@ if __name__ == '__main__':
     # Per a cada patró fes una llista dels generadors que el generen (= TP)
 
     cmatrix['Generadors'] = cmatrix.apply(
-        lambda x: ', '.join(cmatrix[(cmatrix['Patró'] == x['Patró']) & (cmatrix['Resultat'] == 'TP')]['Generador'].unique()), axis=1)
-
+        lambda x: ', '.join(
+            cmatrix[(cmatrix['Patró'] == x['Patró']) & (cmatrix['Resultat'] == 'TP')]['Generador'].unique()), axis=1)
 
     cmatrix.drop(columns='Generador', inplace=True)
     cmatrix.drop_duplicates(subset='Patró', inplace=True)
@@ -301,7 +301,6 @@ if __name__ == '__main__':
     plt.savefig('net/correlacio_TP-Gen.png', dpi=600)
     plt.close()
 
-
     # Agafa els 23 patrons més freqüents del corpus i compta quins generadors els generen
     # i quins no
 
@@ -322,9 +321,9 @@ if __name__ == '__main__':
     # Afegeix una columna amb el recompte de generadors
     df["Nombre de generadors"] = df['Generadors'].apply(lambda x: len(x.split(', ')) if x != 'No generat' else 0)
 
-
-
-
     print('-' * 20, 'Patrons més freqüents', '-' * 20)
     print(tabulate(df, headers='keys', tablefmt='psql'))
     df.to_csv("net/patrons_mes_fq.csv", encoding='utf-8', sep=';', index=True, header=True)
+
+    
+
