@@ -325,5 +325,81 @@ if __name__ == '__main__':
     print(tabulate(df, headers='keys', tablefmt='psql'))
     df.to_csv("net/patrons_mes_fq.csv", encoding='utf-8', sep=';', index=True, header=True)
 
-    
+    ###############################################################################
+    # En un nou DataFrame, converteix cada patró en una llista dels índexs de les síl·labes tòniques (T).
+    # Desa-hi també la freqüència de cada patró i el nombre d'autors
 
+    df_index = []
+    for index, row in data_empiric.iterrows():
+        # Converteix el patró en una llista dels índexs de les síl·labes tòniques (T)
+        pattern = row['Patró']
+        indexes = [i+1 for i, x in enumerate(pattern) if x == 'T']
+        df_index.append([pattern, row['Freqüència (%)'], row['Nombre d\'autors'], indexes])
+    df_index = pd.DataFrame(df_index, columns=['Patró', 'Freqüència (%)', 'Nombre d\'autors', 'Índexs'])
+    df_index.index = range(1, len(df_index) + 1)
+    df_index["Nombre d'índexs"] = df_index['Índexs'].apply(lambda x: len(x))
+    print('-' * 20, 'Patrons amb índexs', '-' * 20)
+    print(tabulate(df_index, headers='keys', tablefmt='psql'))
+
+
+    # Fes un scatterplot de la freqüència (%) i els índexs tònics
+    # L'eix Y són els valors dels índexs (1-10)
+    # L'eix X és la freqüència (%)
+    # Fes que cada patró sigui d'un color
+    # Selecciona els 5 patrons més freqüents
+    mes_fq = df_index.sort_values(by='Freqüència (%)', ascending=False).head(5)
+    plt.figure(figsize=(6, 6))
+    for index, row in df_index.iterrows():
+        indexes = row['Índexs']
+        freq = row['Freqüència (%)']
+        if index in mes_fq.index:
+            # Si el patró és un dels 5 més freqüents
+            plt.scatter([freq] * len(indexes), indexes, alpha=0.7, label=row['Índexs'])
+        else:
+            plt.scatter([freq] * len(indexes), indexes, alpha=0.7, label=None)
+    plt.xlabel('Freqüència (%)')
+    plt.ylabel('Índexs tònics')
+    plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+
+    plt.savefig('net/freq_index_patro.png', dpi=600, bbox_inches='tight')
+    plt.close()
+
+    # Desa-ho en un fitxer Excel
+    df_index.to_excel("net/patrons_indexs.xlsx", index=True)
+
+
+    # Fes un DataFrame (df_fq_indexs) amb una fila per a cada índex (1-10) i una columna (Freqüència (%)) que contengui la suma de freqüències que registra cada índex.
+    # Exemple:
+    # Índex 1: 0.25 + 0.15 + 0.10 = 0.50
+    # Índex 2: 0.25 + 0.15 = 0.40
+    # etc.
+    df_fq_indexs = []
+    for i in range(1, 11):
+        freq = df_index[df_index['Índexs'].apply(lambda x: i in x)]['Freqüència (%)'].sum()
+        df_fq_indexs.append([i, freq])
+    df_fq_indexs = pd.DataFrame(df_fq_indexs, columns=['Índex', 'Freqüència (%)'])
+    df_fq_indexs.index = range(1, len(df_fq_indexs) + 1)
+    print('-' * 20, 'Freqüència (%) per índex', '-' * 20)
+    print(tabulate(df_fq_indexs, headers='keys', tablefmt='psql'))
+
+    # Ara fes un plot de la freqüència per índex
+    plt.figure(figsize=(6, 6))
+    x_values = np.arange(len(df_fq_indexs))
+    y_values = df_fq_indexs['Freqüència (%)']
+    plt.bar(x_values, y_values, color='blue', alpha=0.7)
+    plt.xlabel('Índex')
+    plt.ylabel('Freqüència (%)')
+    plt.xticks(x_values, df_fq_indexs['Índex'], rotation=0)
+    plt.tight_layout()
+    plt.savefig('net/freq_index.png', dpi=600)
+    plt.close()
+
+    # Ara fes un scatter plot de la freqüència per índex
+    plt.figure(figsize=(6, 6))
+    plt.scatter(df_fq_indexs['Índex'], df_fq_indexs['Freqüència (%)'], linestyle='-', marker='o', color='blue', alpha=0.7)
+    plt.xlabel('Índex')
+    plt.ylabel('Freqüència (%)')
+    plt.xticks(df_fq_indexs['Índex'], rotation=0)
+    plt.tight_layout()
+    plt.savefig('net/freq_index_scatter.png', dpi=600)
+    plt.close()
