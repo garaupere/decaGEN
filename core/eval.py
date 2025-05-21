@@ -159,8 +159,6 @@ def oliva1992(model, exemple):
 
 
 def oliva1992b(model, exemple):
-    """"""
-
     def rm1(exemple):
         "Inversió iàmbica."
         posicions = []
