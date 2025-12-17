@@ -100,6 +100,15 @@ def garau2025():
         patterns.extend(result)
     return list(set(patterns))
 
+def jimenez2019():
+    """"""
+    __name__ = 'Jiménez 2019'
+    gen_patterns = ['XXXXXXXXXS']
+    patterns = []
+    for pattern in gen_patterns:
+        result = gen(pattern)
+        patterns.extend(result)
+    return list(set(patterns))
 
 if __name__ == '__main__':
     o1980 = oliva1980()
@@ -126,3 +135,9 @@ if __name__ == '__main__':
     print("-" * 20, "Oliva 2008", f'({len(o2008)})', "-" * 20)
     print(o2008)
     print("-" * 50)
+    j2019 = jimenez2019()
+    print("-" * 20, "Jiménez 2019", f'({len(j2019)})', "-" * 20)
+    print(j2019)
+    print("-" * 50)
+
+

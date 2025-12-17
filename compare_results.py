@@ -14,10 +14,16 @@ from decaGEN import grammar
 
 
 def obtain_real_patterns():
-    corpus = pd.read_excel("compared/corpus.xlsx")
+    #corpus = pd.read_excel("compared/corpus.xlsx")
+
+    corpus = pd.read_csv("D:/corpora/actual/etiquetat/actual.csv", encoding='utf-8', delimiter=';')
+
+    # el corpus són només les mostres amb subdivisió 'Cap'
+    corpus = corpus[corpus['subdivisió'] == 'Cap']
 
     # Genera un patró numèric per cada patró comparatiu del corpus, A=0, T=1
-    corpus['npattern'] = corpus['patró comparatiu'].apply(lambda x: ''.join(['0' if y == 'A' else '1' for y in x]))
+    corpus['npattern'] = corpus['patró comparatiu']#.apply(lambda x: ''.join(['0' if y == 'A' else '1' for y in x]))
+    corpus['patró comparatiu'] = corpus['patró comparatiu'].apply(lambda x: x.replace('0', 'A').replace('1', 'T'))
 
     df_freq = corpus[['patró comparatiu', 'npattern', 'autor']]
 
@@ -365,7 +371,7 @@ if __name__ == "__main__":
     o1980 = grammar(model, gen.oliva1980, eval.oliva1980)
     o1988 = grammar(model, gen.oliva1988, eval.oliva1980)
     o1992b = grammar(model, gen.oliva1992b, eval.oliva1992b)
-    d2006 = grammar(model, gen.dols2006, eval.oliva1980)
+    #d2006 = grammar(model, gen.dols2006, eval.oliva1980)
     o2008 = grammar(model, gen.oliva2008, eval.oliva1980)
     #g2025 = grammar(model, gen.garau2025, eval.oliva1980)
 
@@ -378,7 +384,7 @@ if __name__ == "__main__":
     o1992b = o1992b.drop_duplicates(subset='Exemple')
 
     # Inclou tots els DF en una llista
-    dfs = [o1980, o1988, o1992b, o2008, d2006]
+    dfs = [o1980, o1988, o1992b, o2008]
 
     # Per a cada DF, crea una columna amb el nom del generador
     for df in dfs:
