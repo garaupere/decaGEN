@@ -3,8 +3,7 @@
 import pandas as pd
 from tabulate import tabulate
 
-import gen
-import eval
+from core import gen, eval
 
 
 def grammar(model, generator, evaluator, save: bool = True) -> pd.DataFrame:
