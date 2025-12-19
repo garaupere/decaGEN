@@ -4,6 +4,90 @@ import re
 import pandas as pd
 
 
+def group_feet(pattern: str) -> list:
+    """
+        Separa el string en peus mètrics donant prioritat a:
+          - peus de 2 síl·labes,
+          - després peus de 3 síl·labes,
+          - després peus d'1 síl·laba,
+          - després peus més llargs (>3 síl·labes) *si només contenen un '1'*.
+        Cada peu ha de contenir exactament una '1' (síl·laba forta).
+        """
+    out = []
+    i = 0
+    N = len(pattern)
+    priorities = [2, 3, 1]
+    while i < N:
+        found = False
+        for l in priorities:
+            if i + l <= N:
+                piece = pattern[i:i + l]
+                if piece.count('T') == 1:
+                    out.append(piece)
+                    i += l
+                    found = True
+                    break
+        if not found:
+            # Busca el peu més llarg possible (mínim 4) amb exactament un '1'
+            for l in range(4, N - i + 1):
+                piece = pattern[i:i + l]
+                if piece.count('T') == 1:
+                    out.append(piece)
+                    i += l
+                    found = True
+                    break
+        if not found:
+            raise ValueError(
+                f"Impossible dividir: no es pot crear peu mètric amb '1' únic a partir de la posició {i}")
+    return out
+
+
+def group_colons(patrons):
+    """
+    Organitza un patró mètric dividit en peus en còlons.
+    Prioritza còlons de 3+2 si és possible. Els còlons han de tenir
+    entre 2 i 3 peus cadascun.
+
+    :param patrons: Llista dels peus mètrics ['AAT', 'AT', ...]
+    :return: Una llista de llistes amb els còlons organitzats.
+    """
+    n = len(patrons)  # Número total de peus mètrics
+    colons = []  # Llista per emmagatzemar els còlons
+    i = 0  # Índex per recórrer els peus
+
+    while i < n:
+        restants = n - i  # Peus que queden per distribuir
+
+        # Si queden exactament 5 peus, forcem 3+2
+        if restants == 5:
+            colons.append(patrons[i:i + 3])
+            colons.append(patrons[i + 3:i + 5])
+            break
+
+        # Si queden 4 peus, forcem 2+2
+        elif restants == 4:
+            colons.append(patrons[i:i + 2])
+            colons.append(patrons[i + 2:i + 4])
+            break
+
+        # Si queden 3 peus, fem un còlon de 3
+        elif restants == 3:
+            colons.append(patrons[i:i + 3])
+            break
+
+        # Si queden 2 peus, fem un còlon de 2
+        elif restants == 2:
+            colons.append(patrons[i:i + 2])
+            break
+
+        # En qualsevol altre cas, prioritzem formar un còlon de 3 peus
+        else:
+            colons.append(patrons[i:i + 3])
+            i += 3
+
+    return colons
+
+
 def oliva1980(model, exemple):
     """
         RC1: S→T; W→A
@@ -41,7 +125,7 @@ def oliva1980(model, exemple):
             rules_p[position] = 'RC3'
         table = [list(model) + [''], list(exemple.replace('W', 'A').replace('S', 'T')) + [''], rules_p]
         taula = pd.DataFrame(table)
-        taula.index = ['Model', 'Exemple', 'Regles']
+        taula.index = ['Model', 'Pattern', 'Regles']
         taula.rename(columns={10: 'Complexitat'}, inplace=True)
         taula.rename(columns={i: i + 1 for i in range(10)}, inplace=True)
         print(taula)
@@ -53,7 +137,7 @@ def oliva1980(model, exemple):
               'RC3 posicions': ', '.join([str(i + 1) for i in rc3_positions])}
     df = pd.DataFrame(regles, index=[0])
     # Afegeix l'exemple i el model al principi del DataFrame
-    df.insert(0, 'Exemple', exemple)
+    df.insert(0, 'Pattern', exemple)
     df.insert(1, 'Model', model)
     return df
 
@@ -65,7 +149,7 @@ def oliva1992(model, exemple):
         "Inversió iàmbica."
         posicions = []
         for i in range(0, len(exemple), 2):
-            if exemple[i:i + 2] in ['30', '20', '10']:
+            if exemple[i:i + 2] in ['41', '31', '21']:
                 posicions.append(i)
         return posicions
 
@@ -73,7 +157,7 @@ def oliva1992(model, exemple):
         "Binarització del còlon."
         posicions = []
         for i in range(0, len(exemple), 3):
-            if exemple[i:i + 3] in ['003', '002', '001']:
+            if exemple[i:i + 3] in ['114', '113', '112']:
                 posicions.append(i)
         return posicions
 
@@ -106,7 +190,7 @@ def oliva1992(model, exemple):
         positions = []
         exemple = list(exemple)
         for i in W_positions:
-            if int(exemple[i]) > 0:
+            if int(exemple[i]) > 1:
                 positions.append(i)
         return positions
 
@@ -126,7 +210,7 @@ def oliva1992(model, exemple):
         S_domSpositions = [3, 5, 9]
         positions = []
         for i in S_domSpositions:
-            if int(exemple[i]) < 3:
+            if int(exemple[i]) < 4:
                 positions.append(i)
         return positions
 
@@ -158,7 +242,7 @@ def oliva1992(model, exemple):
     }
     df = pd.DataFrame(regles, index=[0])
     # Afegeix l'exemple i el model al principi del DataFrame
-    df.insert(0, 'Exemple', exemple)
+    df.insert(0, 'Pattern', exemple)
     df.insert(1, 'Model', model)
     return df
 
@@ -261,95 +345,12 @@ def oliva1992b(model, exemple):
     }
     df = pd.DataFrame(regles, index=[0])
     # Afegeix l'exemple i el model al principi del DataFrame
-    df.insert(0, 'Exemple', exemple)
+    df.insert(0, 'Pattern', exemple)
     df.insert(1, 'Model', model)
     return df
 
 
 def jimenez2019(model, exemple):
-    def group_feet(pattern: str) -> list:
-        """
-            Separa el string en peus mètrics donant prioritat a:
-              - peus de 2 síl·labes,
-              - després peus de 3 síl·labes,
-              - després peus d'1 síl·laba,
-              - després peus més llargs (>3 síl·labes) *si només contenen un '1'*.
-            Cada peu ha de contenir exactament una '1' (síl·laba forta).
-            """
-        out = []
-        i = 0
-        N = len(pattern)
-        priorities = [2, 3, 1]
-        while i < N:
-            found = False
-            for l in priorities:
-                if i + l <= N:
-                    piece = pattern[i:i + l]
-                    if piece.count('T') == 1:
-                        out.append(piece)
-                        i += l
-                        found = True
-                        break
-            if not found:
-                # Busca el peu més llarg possible (mínim 4) amb exactament un '1'
-                for l in range(4, N - i + 1):
-                    piece = pattern[i:i + l]
-                    if piece.count('T') == 1:
-                        out.append(piece)
-                        i += l
-                        found = True
-                        break
-            if not found:
-                raise ValueError(
-                    f"Impossible dividir: no es pot crear peu mètric amb '1' únic a partir de la posició {i}")
-        return out
-
-    def group_colons(patrons):
-        """
-        Organitza un patró mètric dividit en peus en còlons.
-        Prioritza còlons de 3+2 si és possible. Els còlons han de tenir
-        entre 2 i 3 peus cadascun.
-
-        :param patrons: Llista dels peus mètrics ['AAT', 'AT', ...]
-        :return: Una llista de llistes amb els còlons organitzats.
-        """
-        n = len(patrons)  # Número total de peus mètrics
-        colons = []  # Llista per emmagatzemar els còlons
-        i = 0  # Índex per recórrer els peus
-
-        while i < n:
-            restants = n - i  # Peus que queden per distribuir
-
-            # Si queden exactament 5 peus, forcem 3+2
-            if restants == 5:
-                colons.append(patrons[i:i + 3])
-                colons.append(patrons[i + 3:i + 5])
-                break
-
-            # Si queden 4 peus, forcem 2+2
-            elif restants == 4:
-                colons.append(patrons[i:i + 2])
-                colons.append(patrons[i + 2:i + 4])
-                break
-
-            # Si queden 3 peus, fem un còlon de 3
-            elif restants == 3:
-                colons.append(patrons[i:i + 3])
-                break
-
-            # Si queden 2 peus, fem un còlon de 2
-            elif restants == 2:
-                colons.append(patrons[i:i + 2])
-                break
-
-            # En qualsevol altre cas, prioritzem formar un còlon de 3 peus
-            else:
-                colons.append(patrons[i:i + 3])
-                i += 3
-
-        return colons
-
-
     def clash(pattern):
         """Compta les violacions de *CLASH, Jiménez (2019)"""
         if pattern is not None:
@@ -426,6 +427,7 @@ def jimenez2019(model, exemple):
             if len(colon) != 2:
                 penalties += 1
         return penalties
+
     def verse_bin(colons):
         """Els versos han de contenir dos còlons. (Violat pels dodecasíl·labs continus, sense particions, i pels alexandrins trimembres amb tres còlons.)"""
         if len(colons) != 2:
@@ -466,7 +468,7 @@ def jimenez2019(model, exemple):
         "CLASH": clash(exemple),
         "EXTRA-CLASH": extra_clash(exemple),
         "LAPSE": lapse(exemple),
-        "EXTRA-LAPSE": extra_lapse(exemple)#,
+        "EXTRA-LAPSE": extra_lapse(exemple)  #,
         #"GLOBAL-WS-HL": global_ws_hl(exemple),
         #"STRICT-WS-HL": strict_ws_hl(exemple),
         #"NON-INITIAL": non_initial(exemple),
@@ -482,16 +484,19 @@ def jimenez2019(model, exemple):
     regles["Complexitat"] = total
     df = pd.DataFrame(regles, index=[0])
     # Afegeix l'exemple i el model al principi del DataFrame
-    df.insert(0, 'Exemple', exemple)
+    df.insert(0, 'Pattern', exemple)
     df.insert(1, 'Model', model)
     return df
 
 
 if __name__ == '__main__':
     model = "WSWSWSWSWS"
-    #exemple = "TAATAATAAT"
-    #print(oliva1980(model, exemple))
+    exemple = "1414141414"
+    #print(oliva1992(model, exemple).to_string())
+
     #exemple = "0040040404"
     #print(oliva1992(model, exemple).to_string())
 
-    print(jimenez2019('', 'ATATATATAT').to_string())
+    #print(jimenez2019('', 'ATATATATAT').to_string())
+
+    print(oliva1992c(oliva1992('WSWSWSWSWS', '1214141414')).to_string())

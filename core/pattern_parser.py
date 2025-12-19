@@ -38,18 +38,18 @@ def parse_patter_hierarchy(pattern):
                 results.append(current)
             return
         if pat[index] == 'X':
-            generate_combinations_2(pat, index + 1, current + '0', results, y_count, t_count)
-            generate_combinations_2(pat, index + 1, current + '1', results, y_count, t_count)
-            generate_combinations_2(pat, index + 1, current + '2', results, y_count, t_count)
-            generate_combinations_2(pat, index + 1, current + '3', results, y_count, t_count)
+            generate_combinations_2(pat, index + 1, current + '1', results, y_count, t_count) # síl·laba
+            generate_combinations_2(pat, index + 1, current + '2', results, y_count, t_count) # accent secundari
+            generate_combinations_2(pat, index + 1, current + '3', results, y_count, t_count) # accent primari de mot
+            generate_combinations_2(pat, index + 1, current + '4', results, y_count, t_count) # accent primari de frase
         elif pat[index] == 'S':
-            generate_combinations_2(pat, index + 1, current + '3', results, y_count, t_count)
+            generate_combinations_2(pat, index + 1, current + '4', results, y_count, t_count)
         elif pat[index] == 'W':
-            generate_combinations_2(pat, index + 1, current + '0', results, y_count, t_count)
+            generate_combinations_2(pat, index + 1, current + '1', results, y_count, t_count)
         elif pat[index] == 'Y':
             if y_count > 1:
-                generate_combinations_2(pat, index + 1, current + '0', results, y_count - 1, t_count)
-            generate_combinations_2(pat, index + 1, current + '3', results, y_count, t_count)
+                generate_combinations_2(pat, index + 1, current + '1', results, y_count - 1, t_count)
+            generate_combinations_2(pat, index + 1, current + '4', results, y_count, t_count)
 
     results = []
     y_count = pattern.count('Y')
